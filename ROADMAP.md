@@ -530,3 +530,9 @@ Lignes `TOUR {json}` : par image figée (défilement trouvé, durée de `findScr
 - [x] SPEC §4.11, `CLAUDE.md`
 - [ ] Image haute dans `pnpm e2e` (session factice, lancé par la CI)
 - [x] Version **0.15.0** (12 oct.), publiée sur ton « déploie en ligne » pour l'essai réel
+
+## Site : quatre modes (demandé le 12 oct.)
+
+- [x] Landing reprise du canevas Claude Design « VibeScreener — landing, quatre usages » : le sélecteur Capture / Vidéo de l'arrivée devient quatre entrées (Capture d'écran, Vidéo, Documents, Parcours) ; section « Un outil, quatre façons de relire » (quatre cartes animées, une couleur par mode) ; barre collante des quatre modes, le chapitre lu mis en avant ; quatre chapitres numérotés (en-tête, « Idéal pour… », démo animée et sa frise, « Comment ça marche »), dont deux nouvelles démos : Documents (un Word glissé, deux points dictés, copie commentée ouverte avec ses commentaires) et Parcours (choix de la fenêtre, une capture par écran stable, page défilée assemblée, éditeur) ; fonctionnalités communes aux quatre modes ; essai interactif avec onglets Capture d'écran / Vidéo ; FAQ rangée par mode ; cinq langues ; vérifiée en local à 375 px et au bureau
+- [x] Plus de mode global sur la page : sélecteur fixé et variantes vidéo des sections, des cartes et du calculateur retirés (64 textes de moins par langue)
+- [x] Site déployé sur vibescreener.dev le 12 oct. (`pnpm site:deploy`)
