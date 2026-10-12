@@ -69,6 +69,8 @@ export const es: Texts = {
     video: 'Grabar un vídeo',
     stopVideo: 'Detener la grabación',
     openDocument: 'Comentar un documento…',
+    tour: 'Grabar un recorrido…',
+    stopTour: (screens: number) => `Detener el recorrido (${plural(screens, 'pantalla', 'pantallas')})`,
     editor: 'Abrir el editor',
     exportPdf: 'Exportar el PDF',
     newSession: 'Nueva sesión',
@@ -112,6 +114,11 @@ export const es: Texts = {
       ['⇧ Clic', 'última zona'],
       ['Esc', 'volver al punto'],
     ] as [string, string][],
+    tourHints: [
+      ['Clic', 'elige la ventana que recorrer'],
+      ['Esc', 'cancelar'],
+    ] as [string, string][],
+    tour: 'Recorrido: cada pantalla se convierte en una captura',
     wholeScreen: 'Pantalla completa',
     zone: 'Zona',
     crop: 'Recorte',
@@ -394,6 +401,8 @@ export const es: Texts = {
     emptyVideoAfter: `y navega: ${isMac ? '⌘' : 'Ctrl'} + clic en un elemento seguido de voz se convierte en un punto.`,
     openDocument: 'Comentar un documento',
     emptyDocument: 'Para comentar un PDF, un Word, un Excel o un PowerPoint, suéltalo en esta ventana.',
+    newTour: 'Grabar un recorrido',
+    emptyTour: 'Para capturar toda una app, graba un recorrido: cada pantalla mostrada y cada página desplazada se convierten en una captura.',
     opening: (name: string, done: number, total: number) => `${name}: página ${done} / ${total}`,
     micError: (err: unknown) => `Micro no disponible: ${err}`,
     zoomedImage: 'Imagen ampliada',
@@ -461,9 +470,17 @@ export const es: Texts = {
       noResponse: 'las pantallas o el micro no responden.',
       failed: (err: string) => `No se puede grabar: ${err}`,
     },
+    // Mode parcours
+    tour: {
+      sessionName: (app: string) => `Recorrido ${app}`,
+      empty: 'No se ha guardado ninguna pantalla.',
+      emptyDetail:
+        'Durante el recorrido, cada pantalla que se queda un cuarto de segundo en la ventana elegida se convierte en una captura. La ventana debe quedar delante de las demás apps.',
+    },
     tray: {
       session: (name: string, points: number) => `VibeScreener — ${name} (${plural(points, 'punto', 'puntos')})`,
       recording: 'dictado en curso',
+      tour: (screens: number) => `recorrido en curso (${plural(screens, 'pantalla', 'pantallas')})`,
       pending: (n: number) => `${plural(n, 'transcripción', 'transcripciones')} en curso`,
       errors: (n: number) => `${plural(n, 'transcripción', 'transcripciones')} con error`,
       tablet: 'tableta conectada',

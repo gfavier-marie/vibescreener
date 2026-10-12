@@ -24,8 +24,8 @@ import {
   systemPreferences,
 } from 'electron';
 import { allAnnotations, findAnnotation, findComment, isDocumentSession, isLang, isSkippedPage, pickLang, type Geometry, type Session } from '@pastille/shared';
-import type { CaptureResult, EditorFocus, ExportFormat, ExportResult, MenuAction, MenuState, PairingState, SettingsState, SettingsTab, VideoFeedback } from '../ipc.ts';
-import { createCapture, listWindows, windowTarget, type CapturedImage } from './capture.ts';
+import type { CaptureResult, EditorFocus, ExportFormat, ExportResult, MenuAction, MenuState, PairingState, SettingsState, SettingsTab, TourRegion, VideoFeedback } from '../ipc.ts';
+import { createCapture, followWindow, listWindows, windowTarget, type CapturedImage, type ChosenWindow } from './capture.ts';
 import { createClicks } from './clicks.ts';
 import { createDictation } from './dictation.ts';
 import { createDock } from './dock.ts';
@@ -45,6 +45,7 @@ import { encodeWav, wavDurationMs } from './wav.ts';
 import { createLicense, POLAR, SITE_URL, TRIAL_DAYS } from './license.ts';
 import { createSettings, type Settings } from './settings.ts';
 import { createTranscriber } from './transcriber.ts';
+import { createTour, type TourCheck, type TourSummary } from './tour.ts';
 import { checkForUpdate, updateCommand, updateOutcome, type Update } from './updater.ts';
 import { createVideo, type VideoSummary } from './video.ts';
 import { createVideoWindow } from './video-window.ts';
@@ -263,7 +264,7 @@ function inspirationTarget() {
 }
 
 function startCapture() {
-  if (videoFinishing) return;
+  if (videoFinishing || tourChoosing || tour.isRecording()) return; // le parcours ne doit pas voir l'overlay
   if (video.isRecording() && !videoInspiration) return; // une inspiration reste possible pendant la vidéo
   // Essai fini sans licence : l'onglet Licence s'ouvre à la place. Sessions, exports et Claude Code restent libres.
   if (!license.canCapture()) {
@@ -327,7 +328,7 @@ function reportCapture(r: CaptureResult) {
 // un point (voir video.ts). ⌃⌥⌘R ou « Arrêter » ouvre l'éditeur. Pas de fichier vidéo : la session reste ordinaire.
 
 const VIDEO_SHORTCUT = isMac ? 'Command+Control+Alt+R' : 'Control+Alt+R';
-const videoWindow = createVideoWindow({ preload, loadPage, onAudio: (chunk) => video.onAudio(chunk) });
+const videoWindow = createVideoWindow({ preload, loadPage, onAudio: (chunk) => video.onAudio(chunk), onTourThumb: (thumb) => tour.onThumb(thumb) });
 const videoFeedback = createVideoFeedback({ preload, loadPage });
 let videoFeedbackState: VideoFeedback = null;
 let videoInspiration = false;
@@ -408,7 +409,7 @@ let videoMetrics: ReturnType<typeof setInterval> | undefined;
 async function toggleVideo() {
   if (videoFinishing) return;
   if (video.isRecording()) return stopVideo();
-  if (videoStarting || capture.isBusy()) return;
+  if (videoStarting || capture.isBusy() || tourChoosing || tourStarting || tour.isRecording()) return;
   if (!license.canCapture()) {
     checkLicense();
     return showSettings('license');
@@ -485,6 +486,141 @@ async function stopVideo() {
   }
 }
 
+// ——— Mode parcours ———
+// « Enregistrer un parcours » : un clic choisit la fenêtre, on s'y promène ; chaque état affiché un instant
+// devient une capture, une page qu'on fait défiler est assemblée (voir tour.ts). Sans micro ni clics globaux :
+// tout se lit dans les images de la fenêtre cachée du mode vidéo. ⌃⌥⌘R ou le menu de l'icône arrête.
+
+let tourChoosing: { editorWasOpen: boolean } | null = null; // overlay ouvert pour choisir la fenêtre
+let tourStarting = false;
+let tourFinishing: Promise<TourSummary> | null = null;
+// Fenêtre suivie (sans identifiant : l'écran entier), sa zone, et si la session du parcours est prête.
+let tourTarget: { windowId?: number; app?: string; region: TourRegion; scaleFactor: number; session: boolean } | null = null;
+let tourMetrics: ReturnType<typeof setInterval> | undefined;
+const logTour = (entry: Record<string, unknown>) => console.log('TOUR', JSON.stringify(entry));
+
+/** Rectangle (DIP, relatif à son écran) en 0–1 de l'écran. */
+const regionOf = (d: Electron.Display, r: Electron.Rectangle): TourRegion => ({
+  displayId: d.id,
+  rect: { x: r.x / d.bounds.width, y: r.y / d.bounds.height, width: r.width / d.bounds.width, height: r.height / d.bounds.height },
+});
+
+const tour = createTour({
+  grab: () => videoWindow.tourGrab(),
+  keep: (grabId, pieces) => videoWindow.tourKeep(grabId, pieces),
+  release: (pieces) => videoWindow.tourRelease(pieces),
+  compose: (plan) => videoWindow.tourCompose(plan),
+  check: checkTourWindow,
+  save: async (png, page) => {
+    const t = tourTarget!;
+    if (!t.session) {
+      // Comme un document : nouvelle session nommée d'après l'app, sauf si la session ouverte est vide.
+      const open = store.get();
+      if (open && (open.captures.length || open.notes?.some((n) => n.text.trim()))) await store.close();
+      await store.ensure();
+      if (t.app) store.update((s) => (s.name = T.main.tour.sessionName(t.app!)), { patchHistory: true });
+      t.session = true;
+    }
+    const c = await store.addCapture(png, {
+      width: page.width,
+      height: page.height,
+      scaleFactor: t.scaleFactor,
+      source: { app: page.app, windowTitle: page.title, displayId: String(t.region.displayId) },
+    });
+    return c.id;
+  },
+  onChange: () => updateTrayMenu(),
+  log: logTour,
+});
+
+/** La fenêtre suivie est-elle devant et à sa place ? Déplacée, la zone la suit. Liste illisible : on continue. */
+async function checkTourWindow(): Promise<TourCheck> {
+  const t = tourTarget;
+  if (t?.windowId === undefined) return { state: 'ok' }; // écran entier
+  const list = await listWindows();
+  if (!list.length) return { state: 'ok' };
+  const w = followWindow(list, t.windowId);
+  if (!w || w.covered) return { state: 'hidden' };
+  const region = regionOf(w.display, w.rect);
+  const same = region.displayId === t.region.displayId && (['x', 'y', 'width', 'height'] as const).every((k) => Math.abs(region.rect[k] - t.region.rect[k]) < 1e-4);
+  if (!same) {
+    t.region = region;
+    t.scaleFactor = w.display.scaleFactor;
+    videoWindow.tourRegion(region);
+    logTour({ moved: region });
+    return { state: 'moved' };
+  }
+  return { state: 'ok', app: w.window.owner.name, title: w.window.title };
+}
+
+/** Démarre (choix de la fenêtre dans l'overlay) ou arrête le parcours. */
+function toggleTour() {
+  if (tourFinishing) return;
+  if (tour.isRecording()) return void stopTour();
+  if (tourChoosing || tourStarting || videoStarting || videoFinishing || video.isRecording() || capture.isBusy() || documents.isBusy()) return;
+  // Essai fini sans licence : comme une capture, l'onglet Licence s'ouvre à la place.
+  if (!license.canCapture()) {
+    checkLicense();
+    return showSettings('license');
+  }
+  tourChoosing = { editorWasOpen: editorOpen };
+  hideEditor(); // on parcourt une autre app
+  void capture.start('tour');
+}
+
+async function beginTour(c: ChosenWindow) {
+  tourChoosing = null;
+  tourStarting = true;
+  try {
+    tourTarget = { windowId: c.window?.id, app: c.window?.owner.name, region: regionOf(c.display, c.rect), scaleFactor: c.display.scaleFactor, session: false };
+    await videoWindow.start({ audio: false });
+    tour.start();
+    videoWindow.tourRegion(tourTarget.region); // la première vignette arrive aussitôt
+    logTour({ started: true, app: tourTarget.app, region: tourTarget.region });
+    // Mesures du lot P0 : processeur (% d'un cœur, tous processus) et mémoire de l'app.
+    tourMetrics = setInterval(() => {
+      const metrics = app.getAppMetrics();
+      logTour({
+        cpu: Math.round(metrics.reduce((n, m) => n + m.cpu.percentCPUUsage, 0)),
+        memoryMB: Math.round(metrics.reduce((n, m) => n + m.memory.workingSetSize, 0) / 1024),
+        screens: tour.screens(),
+      });
+    }, 30_000);
+  } catch (err) {
+    videoWindow.stop();
+    tourTarget = null;
+    void dialog.showMessageBox({ type: 'warning', message: err instanceof Error ? err.message : String(err) });
+  } finally {
+    tourStarting = false;
+    updateTrayMenu();
+  }
+}
+
+/** Arrête le parcours : les pages encore ouvertes sont assemblées et enregistrées avant de fermer les flux. */
+function finishTour(): Promise<TourSummary> {
+  if (tourFinishing) return tourFinishing;
+  if (!tour.isRecording()) return Promise.resolve({ screens: 0 });
+  tourFinishing = (async () => {
+    clearInterval(tourMetrics);
+    const summary = await tour.stop();
+    videoWindow.stop();
+    tourTarget = null;
+    updateTrayMenu();
+    return summary;
+  })().finally(() => (tourFinishing = null));
+  return tourFinishing;
+}
+
+async function stopTour() {
+  const summary = await finishTour();
+  logTour({ stopped: true, ...summary });
+  if (summary.firstCaptureId) showEditor({ captureId: summary.firstCaptureId });
+  else void dialog.showMessageBox({ message: T.main.tour.empty, detail: T.main.tour.emptyDetail });
+}
+
+/** Avant d'ouvrir autre chose : vidéo et parcours s'arrêtent (ce qu'ils ont gardé est enregistré). */
+const finishRecording = () => finishVideo().then(() => finishTour());
+
 // ——— Documents ———
 // « Commenter un document » : le PDF, Word, Excel ou PowerPoint choisi ou déposé sur l'éditeur devient une
 // session dont chaque page est une capture (voir document/open.ts). Pas de fenêtre en plus : pdf.js et
@@ -504,7 +640,7 @@ async function openDocument(path?: string) {
     checkLicense();
     return showSettings('license');
   }
-  await finishVideo();
+  await finishRecording();
   if (!path) {
     showEditor();
     const r = await dialog.showOpenDialog(editor!, {
@@ -616,6 +752,7 @@ async function menuState(): Promise<MenuState> {
     errors: error.length,
     shortcut: shortcutLabel(settings.get().shortcut),
     video: { shortcut: shortcutLabel(VIDEO_SHORTCUT), since: video.isRecording() ? video.startedAt() : undefined },
+    tour: tour.isRecording() ? { screens: tour.screens() } : undefined,
     recents: recents.map(({ id, name, points, screens, updatedAt }) => ({ id, name, points, screens, updatedAt })),
     update: update?.version,
     license: license.view(),
@@ -698,6 +835,8 @@ function onMenuAction(a: MenuAction) {
       return startCapture();
     case 'video':
       return void toggleVideo();
+    case 'tour':
+      return toggleTour();
     case 'open-document':
       return void openDocument();
     case 'editor':
@@ -709,7 +848,7 @@ function onMenuAction(a: MenuAction) {
       return void exportFromMenu('pdf');
     case 'new-session':
       // Session fermée, éditeur vide : on y choisit une capture ou une vidéo.
-      return void finishVideo()
+      return void finishRecording()
         .then(() => store.close())
         .then(() => showEditor());
     case 'pair':
@@ -727,9 +866,9 @@ function onMenuAction(a: MenuAction) {
       if (lastExport) shell.showItemInFolder(lastExport);
       return;
     case 'open-recent':
-      return void finishVideo().then(() => store.open(a.id)).then(() => showEditor());
+      return void finishRecording().then(() => store.open(a.id)).then(() => showEditor());
     case 'export-recent':
-      return void finishVideo().then(() => store.open(a.id)).then(() => exportFromMenu('pdf'));
+      return void finishRecording().then(() => store.open(a.id)).then(() => exportFromMenu('pdf'));
     case 'update':
       return void confirmUpdate();
     case 'license':
@@ -741,7 +880,7 @@ const menubar = createMenubar({
   preload,
   loadPage,
   state: menuState,
-  recording: () => recording || video.isRecording(),
+  recording: () => (tour.isRecording() ? T.main.tray.tour(tour.screens()) : recording || video.isRecording() ? T.main.tray.recording : null),
   barEnabled: () => settings.get().floatingBar,
   onAction: onMenuAction,
   onOpen: () => Date.now() - updateCheckedAt > 10 * 60_000 && void lookForUpdate(),
@@ -1212,6 +1351,7 @@ ipcMain.handle('dictee:sample', async () =>
 );
 ipcMain.on('capture:start', () => startCapture());
 ipcMain.on('video:toggle', () => void toggleVideo());
+ipcMain.on('tour:toggle', () => toggleTour());
 
 // ——— Test de bout en bout sans interaction ———
 
@@ -1445,7 +1585,7 @@ app.on('before-quit', (e) => {
   if (quitting) return;
   e.preventDefault();
   quitting = true;
-  void finishVideo()
+  void finishRecording()
     .then(() => store.flush())
     .finally(() => app.quit());
 });
@@ -1490,6 +1630,11 @@ void app.whenReady().then(async () => {
     loadPage,
     onCapture,
     onCancel: () => {
+      if (tourChoosing) {
+        if (tourChoosing.editorWasOpen) showEditor();
+        tourChoosing = null;
+        return;
+      }
       if (videoInspiration) return cancelVideoInspiration();
       // Échap pendant une inspiration : retour au point, rien n'est joint.
       const target = inspirationTarget();
@@ -1504,7 +1649,9 @@ void app.whenReady().then(async () => {
         inspiration: inspirationTarget()?.annotation.number,
       };
     },
+    onChoose: (c) => void beginTour(c),
     onError: (message) => {
+      tourChoosing = null;
       cancelVideoInspiration();
       reportCapture({ ok: false, error: message });
       if (!autotest) void dialog.showMessageBox({ type: 'warning', message });
@@ -1555,7 +1702,8 @@ void app.whenReady().then(async () => {
     });
   }
   try {
-    if (!globalShortcut.register(VIDEO_SHORTCUT, () => void toggleVideo())) throw new Error();
+    // Le même raccourci arrête aussi un parcours.
+    if (!globalShortcut.register(VIDEO_SHORTCUT, () => void (tour.isRecording() ? stopTour() : toggleVideo()))) throw new Error();
   } catch {
     void dialog.showMessageBox({
       type: 'warning',
@@ -1564,7 +1712,10 @@ void app.whenReady().then(async () => {
     });
   }
   // Écran branché ou débranché : les flux filmés ne correspondent plus, l'enregistrement s'arrête.
-  const stopOnDisplayChange = () => video.isRecording() && void stopVideo();
+  const stopOnDisplayChange = () => {
+    if (video.isRecording()) void stopVideo();
+    if (tour.isRecording()) void stopTour();
+  };
   screen.on('display-added', stopOnDisplayChange);
   screen.on('display-removed', stopOnDisplayChange);
   menubar.start();

@@ -1,5 +1,5 @@
 // Entrées du menu de l'icône (§4.7), partagées par le popover et le menu ≡ de l'éditeur :
-// capture, vidéo, document, export, sessions récentes, licence, mise à jour, appairage, réglages, quitter.
+// capture, vidéo, parcours, document, export, sessions récentes, licence, mise à jour, appairage, réglages, quitter.
 
 import type { MenuAction, MenuState } from '../../ipc.ts';
 import * as I from '../icons.tsx';
@@ -23,6 +23,11 @@ export function MenuItems({ s, act, inEditor = false }: { s: MenuState; act: (a:
         <I.Video />
         <span>{s.video.since ? T.menu.stopVideo : T.menu.video}</span>
         <kbd>{s.video.shortcut}</kbd>
+      </button>
+      <button type="button" className="item" onClick={() => act({ type: 'tour' })}>
+        <I.Tour />
+        <span>{s.tour ? T.menu.stopTour(s.tour.screens) : T.menu.tour}</span>
+        {s.tour && <kbd>{s.video.shortcut}</kbd>}
       </button>
       <button type="button" className="item" onClick={() => act({ type: 'open-document' })}>
         <I.Doc />

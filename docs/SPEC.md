@@ -10,6 +10,7 @@
 > - **Export Markdown** (§6.3, [S]) avancé au lot 1, à côté du PDF.
 > - Tablette (§11) : **iPad + Apple Pencil**. Validation **Mac et Windows** dès les POC.
 > - **Mode vidéo** (2026-10-07, demandé, voir `ROADMAP.md`) : ⌃⌥⌘R enregistre ; on navigue par des clics seuls, et ⌘ + clic (Ctrl + clic) suivi de paroles devient un point ; pas de fichier vidéo, la session reste ordinaire.
+> - **Mode parcours** (2026-10-12, demandé, §4.11) : on se promène dans une fenêtre choisie, chaque écran et chaque état deviennent une capture, une page défilée est assemblée en une seule image.
 
 ## 1. Contexte et objectifs
 
@@ -183,6 +184,29 @@ Un PDF, un Word, un Excel ou un PowerPoint s'ouvre dans l'app et se commente com
   - graphiques et images posés sur les feuilles Excel non dessinés ;
   - mise en page Word recalculée par la bibliothèque, donc parfois différente de Word ;
   - signature numérique d'un PDF invalidée dans la copie commentée.
+
+### 4.11 Parcours (demandé le 12 oct. 2026)
+
+On se promène vite dans un logiciel ; à l'arrêt, toute son interface est en captures, prête à commenter ou à donner à l'IA.
+
+- Démarrage : « Enregistrer un parcours… » (menu de l'icône, menu ≡, éditeur vide et bout des vignettes). L'overlay de capture s'ouvre : un clic choisit la fenêtre à suivre (hors de toute fenêtre, l'écran entier), Échap annule. Même blocage que la capture après l'essai.
+- Pendant le parcours :
+  - pas de micro, pas de clics globaux (ni Accessibilité) : tout se lit dans les images de la fenêtre ;
+  - l'icône passe en enregistrement, son menu dit « Arrêter le parcours (N écrans) » ;
+  - aucune fenêtre de VibeScreener à l'écran ; la capture et la vidéo sont indisponibles.
+- Ce qui devient une capture :
+  - **tout état resté affiché un quart de seconde** : pages, onglets, menus, popups, modales ;
+  - un état identique à un écran déjà enregistré n'est pas répété ; un menu ouvert puis refermé fait reprendre la page où elle en était ;
+  - une page qu'on fait **défiler verticalement est assemblée en une seule image haute** : en-tête et pied fixes gardés une fois, barre latérale prolongée ; au-delà de 5 hauteurs de fenêtre, la suite devient une autre capture ;
+  - chaque capture garde l'app et le titre de la fenêtre (titre de l'onglet d'un navigateur, par exemple).
+- La fenêtre suivie peut bouger ; recouverte par une autre app, réduite ou sur un autre bureau, le parcours se met en pause.
+- Arrêt : ⌃⌥⌘R (Ctrl+Alt+R) ou le menu de l'icône. L'éditeur s'ouvre sur le premier écran d'une session nommée d'après l'app (« Parcours Safari »), sauf si la session ouverte était vide. Une capture très haute s'y lit ajustée à la largeur, la molette la fait défiler.
+- Limites :
+  - le curseur apparaît dans les images ;
+  - seul le défilement vertical est assemblé : un défilement de côté donne une nouvelle capture ;
+  - un menu qui déborde de la fenêtre est coupé à son bord ;
+  - un survol qui reste affiché peut donner une capture ; une vidéo qui joue empêche l'écran d'être stable ;
+  - une page qui se charge pendant le défilement peut laisser un raccord.
 
 ## 5. PWA de croquis
 

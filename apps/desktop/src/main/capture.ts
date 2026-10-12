@@ -1,5 +1,6 @@
 // Capture d'écran : un overlay par écran, préchargé et caché ; au raccourci on fige
 // tous les écrans, on affiche l'image figée, puis on recadre selon le clic ou la zone.
+// Le mode parcours s'en sert pour choisir la fenêtre à suivre : le clic la désigne, rien n'est capturé.
 
 import {
   app,
@@ -24,6 +25,7 @@ type Pending = {
   windowsMs: Promise<number>;
   hidden: BrowserWindow[]; // nos fenêtres masquées pendant la capture
   inspiration: boolean; // capture de l'inspiration d'un point : une zone est toujours recadrée
+  tour: boolean; // choix de la fenêtre du mode parcours
   timings: { captureMs: number; overlayMs: number };
 };
 
@@ -41,11 +43,16 @@ export type CapturedImage = {
   timings: { captureMs: number; windowsMs: number; overlayMs: number; pickToSavedMs: number };
 };
 
+/** Fenêtre choisie pour le mode parcours : sa partie visible sur son écran (DIP, relative à l'écran) ;
+ *  sans fenêtre sous le clic, l'écran entier. */
+export type ChosenWindow = { display: Display; rect: Rectangle; window?: WindowInfo };
+
 export type CaptureOptions = {
   preload: string;
   loadPage: (win: BrowserWindow, page: 'overlay') => void;
   onCapture: (c: CapturedImage) => Promise<void>;
   onCancel: () => void; // Échap dans l'overlay
+  onChoose: (c: ChosenWindow) => void; // mode parcours
   onError: (message: string) => void;
   /** Ce que l'overlay annonce : session en cours, numéro de l'écran et du prochain point. */
   info: () => Omit<OverlayShow, 'jpeg'>;
@@ -119,7 +126,8 @@ export function createCapture(opts: CaptureOptions) {
     });
   }
 
-  async function start(): Promise<void> {
+  /** `tour` : le clic choisit la fenêtre du mode parcours au lieu de la capturer. */
+  async function start(mode: 'capture' | 'tour' = 'capture'): Promise<void> {
     if (pending) return;
     const t0 = performance.now();
     const windows = listWindows();
@@ -150,8 +158,8 @@ export function createCapture(opts: CaptureOptions) {
       return;
     }
 
-    const info = opts.info();
-    pending = { t0, frozen, windows, windowsMs, hidden, inspiration: info.inspiration !== undefined, timings: { captureMs, overlayMs: 0 } };
+    const info = mode === 'tour' ? { ...opts.info(), inspiration: undefined, tour: true } : opts.info();
+    pending = { t0, frozen, windows, windowsMs, hidden, inspiration: info.inspiration !== undefined, tour: mode === 'tour', timings: { captureMs, overlayMs: 0 } };
     await Promise.all(overlays.map((o) => showOverlay(o, frozen.get(o.display.id)!, info)));
     pending.timings.overlayMs = performance.now() - t0;
 
@@ -185,6 +193,11 @@ export function createCapture(opts: CaptureOptions) {
     if (pick.kind === 'cancel') return opts.onCancel();
 
     const d = o.display;
+    if (p.tour) {
+      const at = pick.kind === 'zone' ? { x: pick.x + pick.w / 2, y: pick.y + pick.h / 2 } : pick;
+      const { rect, hit } = windowTarget(await p.windows, d, { x: d.bounds.x + at.x, y: d.bounds.y + at.y });
+      return opts.onChoose({ display: d, rect, window: hit });
+    }
     const image = p.frozen.get(d.id)!;
     const size = image.getSize();
     const sx = size.width / d.bounds.width;
@@ -265,6 +278,20 @@ export function windowTarget(windows: WindowInfo[], d: Display, at: { x: number;
   });
   const inter = hit && onDisplay(toDip(hit.bounds), d);
   return inter ? { rect: inter, hit } : { rect: { x: 0, y: 0, width: d.bounds.width, height: d.bounds.height } };
+}
+
+/** Fenêtre suivie par le mode parcours : sa partie visible sur l'écran qui en montre le plus (relative à
+ *  celui-ci), et si une fenêtre d'une autre app passe devant. Null si elle n'est plus à l'écran (fermée,
+ *  réduite, sur un autre bureau). */
+export function followWindow(windows: WindowInfo[], id: number): { display: Display; rect: Rectangle; window: WindowInfo; covered: boolean } | null {
+  const i = windows.findIndex((w) => w.id === id);
+  const w = windows[i];
+  if (!w) return null;
+  const b = toDip(w.bounds);
+  const display = screen.getDisplayMatching(b);
+  const rect = onDisplay(b, display);
+  const covered = windows.slice(0, i).some((o) => o.owner.processId !== w.owner.processId && isCandidate(o) && !!intersect(toDip(o.bounds), b));
+  return rect && { display, rect, window: w, covered };
 }
 
 /** Fenêtres visées par un clic : pas les nôtres, pas les minuscules (icônes, menus). */

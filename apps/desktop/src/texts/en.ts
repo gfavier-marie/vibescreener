@@ -69,6 +69,8 @@ export const en: Texts = {
     video: 'Record a video',
     stopVideo: 'Stop recording',
     openDocument: 'Comment on a document…',
+    tour: 'Record a walkthrough…',
+    stopTour: (screens: number) => `Stop the walkthrough (${plural(screens, 'screen', 'screens')})`,
     editor: 'Open editor',
     exportPdf: 'Export PDF',
     newSession: 'New session',
@@ -112,6 +114,11 @@ export const en: Texts = {
       ['⇧ Click', 'last area'],
       ['Esc', 'back to the point'],
     ] as [string, string][],
+    tourHints: [
+      ['Click', 'picks the window to walk through'],
+      ['Esc', 'cancel'],
+    ] as [string, string][],
+    tour: 'Walkthrough: every screen becomes a capture',
     wholeScreen: 'Full screen',
     zone: 'Area',
     crop: 'Crop',
@@ -394,6 +401,8 @@ export const en: Texts = {
     emptyVideoAfter: `then browse: ${isMac ? '⌘' : 'Ctrl'}-click an element and speak to make it a point.`,
     openDocument: 'Comment on a document',
     emptyDocument: 'To comment on a PDF, Word, Excel or PowerPoint file, drop it into this window.',
+    newTour: 'Record a walkthrough',
+    emptyTour: 'To capture a whole app, record a walkthrough: every screen shown and every scrolled page becomes a capture.',
     opening: (name: string, done: number, total: number) => `${name}: page ${done} / ${total}`,
     micError: (err: unknown) => `Microphone unavailable: ${err}`,
     zoomedImage: 'Enlarged image',
@@ -462,9 +471,17 @@ export const en: Texts = {
       noResponse: 'the screens or the microphone aren’t responding.',
       failed: (err: string) => `Can’t record: ${err}`,
     },
+    // Mode parcours
+    tour: {
+      sessionName: (app: string) => `Walkthrough ${app}`,
+      empty: 'No screen recorded.',
+      emptyDetail:
+        'During the walkthrough, every screen that stays on display for a quarter of a second in the chosen window becomes a capture. The window must stay in front of other apps.',
+    },
     tray: {
       session: (name: string, points: number) => `VibeScreener — ${name} (${plural(points, 'point', 'points')})`,
       recording: 'dictating',
+      tour: (screens: number) => `walkthrough in progress (${plural(screens, 'screen', 'screens')})`,
       pending: (n: number) => `${plural(n, 'transcription', 'transcriptions')} in progress`,
       errors: (n: number) => `${plural(n, 'transcription', 'transcriptions')} failed`,
       tablet: 'tablet connected',

@@ -496,3 +496,37 @@ Retour : une feuille coupée en morceaux de 50 lignes et 1200 px de large, sur p
 - [x] Section « Et aussi · Documents » entre le calculateur et les tarifs, reprise du canevas Claude Design « VibeScreener — landing, section Documents » : encart gris, deux sorties (pour l'IA, pour les relecteurs), formats, illustration d'un Word commenté dans l'éditeur ; identique dans les deux modes, absente de la navigation. Question « Quels documents peut-on ouvrir ? » dans la FAQ, « Documents » dans la ligne du bandeau final ; cinq langues ; vérifiée en local à 375 px et au bureau
 - [x] Site déployé sur vibescreener.dev le 8 oct. (`pnpm site:deploy`)
 - [x] Version **0.14.3** (8 oct.) : correctifs Windows (micro autorisé, éditeur ouvert au lancement), publiée par la CI sur le tag
+
+## Mode parcours (demandé le 12 oct. 2026)
+
+On choisit une fenêtre, on s'y promène vite ; chaque état resté affiché un quart de seconde (pages, onglets, menus, modales) devient une capture, et une page défilée est assemblée en une seule image haute. Spécification : SPEC §4.11.
+
+Choix validés le 12 oct. : **mode à part, sans micro** (on commente ensuite dans l'éditeur) ; **une fenêtre choisie au départ** ; **tout état stable**, vite (250 ms). Comme la vidéo et les documents, le parcours devient une session ordinaire. Aucune dépendance ni autorisation nouvelle : la fenêtre cachée du mode vidéo filme, tout se déduit des images.
+
+### Lot P1 — De bout en bout
+
+- [x] `stitch.ts` (sans electron) : défilement entre deux images de la zone, réduites en largeur seulement (256 colonnes, toutes les lignes) ; lignes fixes en haut et en bas, colonnes fixes ; recherche sur une signature par ligne puis vérification au pixel près des meilleurs décalages (un contenu au pas régulier en donne plusieurs). 12 tests sur des pages de synthèse (en-tête, pied, barre latérale, défilement vers le haut, menu par-dessus, autre page)
+- [x] `tour.ts` (sans electron) : mouvement / repos (250 ms sans mouvement, minuterie : un écran immobile n'envoie plus d'images), une image figée à la fois pendant le mouvement et au repos ; défilement (nouvelles lignes gardées), même écran, autre état (fenêtre revérifiée par get-windows : recouverte = pause, déplacée = la zone suit) ; page précédente gardée ouverte (menu refermé = reprise) ; état déjà enregistré non répété ; page limitée à 5 hauteurs de fenêtre ; plan d'assemblage (en-tête de la première image, contenu, pied de la dernière, colonnes fixes prolongées). 9 tests
+- [x] Fenêtre cachée (`renderer/video.ts`, `video-window.ts`) : démarrage sans micro, vignette 128×72 de la zone à chaque image, profil et image figée, bandes de lignes gardées, page assemblée en PNG
+- [x] Overlay : mode « choisir une fenêtre » (`capture.start('tour')`) ; `followWindow` dans `capture.ts`
+- [x] `index.ts` : « Enregistrer un parcours… » (menu de l'icône, menu ≡, éditeur vide, bout des vignettes), licence, session nommée d'après l'app à la première capture, ⌃⌥⌘R arrête, info-bulle de l'icône, capture et vidéo indisponibles pendant le parcours, arrêt avant un document, une nouvelle session ou un changement d'écrans
+- [x] Éditeur : capture plus haute qu'une fois et demie sa largeur ajustée à la largeur, la molette la fait défiler
+- [x] Textes dans les cinq langues (Parcours, Walkthrough, Recorrido, Rundgang, Percorso)
+
+### Lot P0 — Essai réel et réglages (avec ton accord avant de lancer l'app)
+
+Lignes `TOUR {json}` : par image figée (défilement trouvé, durée de `findScroll`, vérification de la fenêtre), par page (taille, bandes), toutes les 30 s (processeur, mémoire, écrans).
+
+- [ ] Assemblage juste : page web à en-tête collant, app à barre latérale (Notion, Linear), panneau intérieur qui défile, défilement rapide au trackpad (recouvrement suffisant à 10 images/s ?)
+- [ ] Processeur : `findScroll` (15 à 25 ms mesurés hors app sur 256 × 1900) et `listWindows()` au repos
+- [ ] Survol et curseur : captures parasites ? réglage de `STABLE_MS`, `MOTION_RATIO` et des seuils de `stitch.ts`
+- [ ] Le curseur et nos fenêtres protégées apparaissent-ils dans les images ?
+- [ ] Windows (CI, puis un PC)
+
+*Critère : une page de 4 écrans défilée au trackpad donne une seule image sans raccord visible ; menu ouvert puis refermé donne 2 captures, pas 3 ; < 30 % d'un cœur.*
+
+### Lot P2 — Docs et version
+
+- [x] SPEC §4.11, `CLAUDE.md`
+- [ ] Image haute dans `pnpm e2e` (session factice, lancé par la CI)
+- [x] Version **0.15.0** (12 oct.), publiée sur ton « déploie en ligne » pour l'essai réel

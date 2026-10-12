@@ -15,6 +15,7 @@ Outil de revue d'interface : raccourci → capture → points numérotés dicté
   - Carte du texte de chaque page dans `captures/<id>.json` (`anchor.ts`).
   - Copie commentée au format du document : `commented-*.ts`, pdf-lib pour le PDF, jszip + @xmldom/xmldom pour Office.
 - Transcription : `whisper-server` (whisper.cpp) en processus enfant, modèle `models/ggml-large-v3-turbo-q5_0.bin`.
+- Parcours (`tour.ts`, `stitch.ts`) : la fenêtre cachée du mode vidéo filme la fenêtre choisie ; chaque état stable devient une capture, une page défilée est assemblée (lignes `TOUR {json}`).
 
 ## Commandes
 

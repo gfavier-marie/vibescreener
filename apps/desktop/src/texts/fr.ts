@@ -72,6 +72,8 @@ export const fr = {
     video: 'Enregistrer une vidéo',
     stopVideo: "Arrêter l'enregistrement",
     openDocument: 'Commenter un document…',
+    tour: 'Enregistrer un parcours…',
+    stopTour: (screens: number) => `Arrêter le parcours (${plural(screens, 'écran')})`,
     editor: "Ouvrir l'éditeur",
     exportPdf: 'Exporter le PDF',
     newSession: 'Nouvelle session',
@@ -115,6 +117,11 @@ export const fr = {
       ['⇧ Clic', 'dernière zone'],
       ['Échap', 'retour au point'],
     ] as [string, string][],
+    tourHints: [
+      ['Clic', 'choisit la fenêtre à parcourir'],
+      ['Échap', 'annuler'],
+    ] as [string, string][],
+    tour: 'Parcours : chaque écran devient une capture',
     wholeScreen: 'Écran entier',
     zone: 'Zone',
     crop: 'Recadrage',
@@ -397,6 +404,8 @@ export const fr = {
     emptyVideoAfter: `puis naviguez : ${isMac ? '⌘' : 'Ctrl'} + clic sur un élément suivi de paroles devient un point.`,
     openDocument: 'Commenter un document',
     emptyDocument: 'Pour commenter un PDF, un Word, un Excel ou un PowerPoint, déposez-le dans cette fenêtre.',
+    newTour: 'Enregistrer un parcours',
+    emptyTour: 'Pour capturer toute une app, enregistrez un parcours : chaque écran affiché et chaque page défilée deviennent une capture.',
     opening: (name: string, done: number, total: number) => `${name} : page ${done} / ${total}`,
     micError: (err: unknown) => `Micro indisponible : ${err}`,
     zoomedImage: 'Image agrandie',
@@ -467,9 +476,17 @@ export const fr = {
       noResponse: 'les écrans ou le micro ne répondent pas.',
       failed: (err: string) => `Enregistrement impossible : ${err}`,
     },
+    // Mode parcours
+    tour: {
+      sessionName: (app: string) => `Parcours ${app}`,
+      empty: 'Aucun écran enregistré.',
+      emptyDetail:
+        'Pendant le parcours, chaque écran resté affiché un quart de seconde dans la fenêtre choisie devient une capture. La fenêtre doit rester devant les autres apps.',
+    },
     tray: {
       session: (name: string, points: number) => `VibeScreener — ${name} (${plural(points, 'point')})`,
       recording: 'dictée en cours',
+      tour: (screens: number) => `parcours en cours (${plural(screens, 'écran')})`,
       pending: (n: number) => `${plural(n, 'transcription')} en cours`,
       errors: (n: number) => `${plural(n, 'transcription')} en erreur`,
       tablet: 'tablette connectée',

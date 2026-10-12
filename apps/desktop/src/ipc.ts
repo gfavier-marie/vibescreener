@@ -14,6 +14,7 @@ export type OverlayShow = {
   nextNumber: number;
   cursor?: { x: number; y: number }; // position du curseur sur cet écran, au moment du raccourci
   inspiration?: number; // capture d'une inspiration pour ce point : rien n'est posé
+  tour?: boolean; // mode parcours : le clic choisit la fenêtre à suivre, rien n'est capturé
 };
 
 /** Fenêtre visable sur l'écran de l'overlay (DIP), de l'avant vers l'arrière. */
@@ -58,6 +59,27 @@ export type VideoImage = {
 };
 
 export const VIDEO_THUMB = { width: 64, height: 36 };
+
+/** Fenêtre cachée : écrans filmés, et micro ouvert ou non (le mode parcours n'écoute pas). */
+export type VideoStart = { sources: VideoSource[]; audio: boolean };
+
+/** Mode parcours : zone suivie, rectangle en 0–1 de son écran. */
+export type TourRegion = { displayId: number; rect: { x: number; y: number; width: number; height: number } };
+
+/** Image figée de la zone : profil pour l'assemblage (TOUR_PROFILE colonnes × toutes les lignes, en gris) et vignette. */
+export type TourGrabbed = { width: number; height: number; profile: Uint8Array; thumb: Uint8Array };
+
+/** Lignes [y, y + height) d'une image figée, gardées sous un numéro choisi par le processus principal. */
+export type TourPiece = { id: number; y: number; height: number };
+
+/** Morceau posé sur la page assemblée, étiré si la destination est plus grande. */
+export type TourDraw = { piece: number; sx: number; sy: number; sw: number; sh: number; dx: number; dy: number; dw: number; dh: number };
+
+/** Page assemblée : morceaux posés sur une image de width × height pixels, libérés ensuite. */
+export type TourCompose = { composeId: number; width: number; height: number; draws: TourDraw[]; release: number[] };
+
+export const TOUR_THUMB = { width: 128, height: 72 };
+export const TOUR_PROFILE = 256; // colonnes du profil
 
 /** Niveau RMS du micro au-dessus duquel quelqu'un parle (dictée de l'éditeur et mode vidéo). */
 export const VOICE_RMS = 0.015;
@@ -123,13 +145,14 @@ export type MenuState = {
   errors: number; // transcriptions en erreur
   shortcut: string; // raccourci de capture, affiché (« ⌃⌥⌘P »)
   video: { shortcut: string; since?: number }; // mode vidéo : raccourci affiché, début de l'enregistrement en cours (Date.now())
+  tour?: { screens: number }; // mode parcours en cours : écrans gardés
   recents: SessionSummary[];
   update?: string; // version plus récente publiée
   license: LicenseView;
 };
 
 export type MenuAction =
-  | { type: 'capture' | 'video' | 'open-document' | 'editor' | 'sessions' | 'export' | 'new-session' | 'pair' | 'claude-code' | 'settings' | 'quit' | 'close' | 'hide-bar' | 'reveal' | 'update' | 'license' }
+  | { type: 'capture' | 'video' | 'tour' | 'open-document' | 'editor' | 'sessions' | 'export' | 'new-session' | 'pair' | 'claude-code' | 'settings' | 'quit' | 'close' | 'hide-bar' | 'reveal' | 'update' | 'license' }
   | { type: 'open-recent' | 'export-recent'; id: string };
 
 /** Message de la barre flottante après un export. */
@@ -202,12 +225,13 @@ export type PastilleApi = {
   onCaptureResult(cb: (r: CaptureResult) => void): () => void;
   startCapture(): void;
   toggleVideo(): void;
+  toggleTour(): void;
   shortcutStatus(): Promise<{ accelerator: string; registered: boolean }>;
   whisperStatus(): Promise<WhisperStatus>;
   transcribe(samples: Float32Array): Promise<TranscribeResult>;
   transcribeSample(): Promise<TranscribeResult>;
   // Fenêtre cachée du mode vidéo
-  onVideoStart(cb: (sources: VideoSource[]) => void): () => void;
+  onVideoStart(cb: (start: VideoStart) => void): () => void;
   videoStarted(error?: string): void; // flux et micro ouverts, ou l'erreur
   onVideoFreeze(cb: (f: { frameId: number; displayId: number }) => void): () => void;
   onVideoCrop(cb: (c: VideoCrop) => void): () => void;
@@ -217,6 +241,15 @@ export type PastilleApi = {
   videoFeedbackHover(inside: boolean): void;
   videoAction(action: 'draw' | 'inspiration' | 'write' | 'capture-inspiration' | 'cancel-inspiration' | 'stop'): Promise<void>;
   videoText(text: string | null): Promise<void>; // fin du commentaire écrit ; null l'annule
+  // Fenêtre cachée, mode parcours
+  onTourRegion(cb: (region: TourRegion | null) => void): () => void;
+  tourThumb(thumb: Uint8Array): void; // vignette de la zone, à chaque image
+  onTourGrab(cb: (g: { grabId: number }) => void): () => void;
+  tourGrabbed(grabId: number, grabbed: TourGrabbed | null): void;
+  onTourKeep(cb: (k: { grabId: number; pieces: TourPiece[] }) => void): () => void;
+  onTourRelease(cb: (pieces: number[]) => void): () => void;
+  onTourCompose(cb: (plan: TourCompose) => void): () => void;
+  tourComposed(composeId: number, png: Uint8Array | null): void;
   // Overlay
   onOverlayShow(cb: (data: OverlayShow) => void): void;
   onOverlayWindows(cb: (windows: OverlayWindow[]) => void): void;

@@ -485,7 +485,8 @@ function App() {
     };
   });
 
-  // « Nouvelle capture », « Enregistrer une vidéo » et « Commenter un document » : au bout des vignettes, et dans l'éditeur vide.
+  // « Nouvelle capture », « Enregistrer une vidéo », « Enregistrer un parcours » et « Commenter un document » :
+  // au bout des vignettes, et dans l'éditeur vide.
   const newCapture = (
     <button type="button" className="btn primary new-capture" onClick={() => api.startCapture()}>
       <I.Plus size={14} />
@@ -498,6 +499,12 @@ function App() {
       <I.Video size={14} />
       {T.menu.video}
       <kbd>{videoShortcut}</kbd>
+    </button>
+  );
+  const newTour = (
+    <button type="button" className="btn new-capture" onClick={() => api.toggleTour()}>
+      <I.Tour size={14} />
+      {T.editor.newTour}
     </button>
   );
   const newDocument = (
@@ -517,11 +524,14 @@ function App() {
           <br />
           {T.editor.emptyVideoBefore} <kbd>{videoShortcut}</kbd> {T.editor.emptyVideoAfter}
           <br />
+          {T.editor.emptyTour}
+          <br />
           {T.editor.emptyDocument}
         </p>
         <div className="actions">
           {newCapture}
           {newVideo}
+          {newTour}
           {newDocument}
           <button type="button" className="btn" onClick={() => setSessionsOpen(true)}>
             <I.Folder size={14} />
@@ -1045,6 +1055,7 @@ function App() {
         ))}
         {newCapture}
         {newVideo}
+        {newTour}
         {newDocument}
       </nav>
 

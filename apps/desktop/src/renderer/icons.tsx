@@ -52,6 +52,13 @@ export const Video = (p: Props) => (
     <path d="M10.5 7l4-2v6l-4-2" />
   </Stroke>
 );
+/** Parcours : des écrans empilés. */
+export const Tour = (p: Props) => (
+  <Stroke {...p}>
+    <rect x="4.5" y="1.5" width="10" height="9" rx="1.5" />
+    <path d="M11.5 13.5h-8a2 2 0 0 1-2-2v-6" />
+  </Stroke>
+);
 export const Window = (p: Props) => (
   <Stroke {...p}>
     <rect x="2" y="3" width="12" height="10" rx="1.5" />

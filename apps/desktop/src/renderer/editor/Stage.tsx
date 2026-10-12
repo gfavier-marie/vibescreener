@@ -4,7 +4,8 @@
 // Molette = zoom, Espace maintenu + glisser = déplacement de la vue. Document : toutes ses pages les unes
 // sous les autres, ajustées à la largeur ; la molette fait défiler d'une page à l'autre comme dans un lecteur
 // (⇧ + molette : de côté, pour une feuille Excel zoomée), ⌘ / Ctrl + molette (ou le pincement) zoome.
-// La page au milieu de l'écran devient la page en cours.
+// La page au milieu de l'écran devient la page en cours. Une capture très haute (page assemblée par le mode
+// parcours) se lit de même : ajustée à la largeur, la molette la fait défiler.
 
 import { useEffect, useLayoutEffect, useRef, useState, type ReactNode } from 'react';
 import { drawAnnotations, pinPosition, type Annotation, type Capture, type Ctx2D, type Geometry } from '@pastille/shared';
@@ -72,7 +73,8 @@ export function Stage(props: {
 }) {
   const { capture } = props;
   const pages = props.pages?.length ? props.pages : [capture];
-  const reading = !!props.pages?.length; // document : défilement continu
+  // Document, ou capture plus haute qu'une fois et demie sa largeur : défilement continu.
+  const reading = !!props.pages?.length || capture.height > capture.width * 1.5;
   const wrapRef = useRef<HTMLDivElement>(null);
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const images = useRef(new Map<string, HTMLImageElement>());

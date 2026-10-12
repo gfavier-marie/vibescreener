@@ -14,7 +14,7 @@ export type MenubarOptions = {
   preload: string;
   loadPage: (win: BrowserWindow, page: 'menu' | 'bar') => void;
   state: () => Promise<MenuState>;
-  recording: () => boolean; // dictée en cours
+  recording: () => string | null; // dictée ou enregistrement en cours : ce qu'en dit l'info-bulle
   barEnabled: () => boolean; // réglage « barre flottante »
   onAction: (action: MenuAction) => void;
   onOpen?: () => void; // menu ouvert (revérifier les mises à jour, par exemple)
@@ -59,7 +59,7 @@ export function createMenubar(opts: MenubarOptions) {
     tray.setToolTip(
       [
         s.session ? T.main.tray.session(s.session.name, s.session.points) : 'VibeScreener',
-        opts.recording() ? T.main.tray.recording : '',
+        opts.recording() ?? '',
         s.pending ? T.main.tray.pending(s.pending) : '',
         s.errors ? T.main.tray.errors(s.errors) : '',
         s.tablet ? T.main.tray.tablet : '',

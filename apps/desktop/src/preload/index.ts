@@ -72,6 +72,7 @@ const api: PastilleApi = {
   onCaptureResult: (cb) => on('capture:result', cb),
   startCapture: () => ipcRenderer.send('capture:start'),
   toggleVideo: () => ipcRenderer.send('video:toggle'),
+  toggleTour: () => ipcRenderer.send('tour:toggle'),
   shortcutStatus: () => ipcRenderer.invoke('shortcut:status'),
   whisperStatus: () => ipcRenderer.invoke('whisper:status'),
   transcribe: (samples) => ipcRenderer.invoke('dictee:transcribe', samples),
@@ -87,6 +88,15 @@ const api: PastilleApi = {
   videoFeedbackHover: (inside) => ipcRenderer.send('video:feedback-hover', inside),
   videoAction: (action) => ipcRenderer.invoke('video:action', action),
   videoText: (text) => ipcRenderer.invoke('video:text', text),
+
+  onTourRegion: (cb) => on('tour:region', cb),
+  tourThumb: (thumb) => ipcRenderer.send('tour:thumb', thumb),
+  onTourGrab: (cb) => on('tour:grab', cb),
+  tourGrabbed: (grabId, grabbed) => ipcRenderer.send('tour:grabbed', grabId, grabbed),
+  onTourKeep: (cb) => on('tour:keep', cb),
+  onTourRelease: (cb) => on('tour:release', cb),
+  onTourCompose: (cb) => on('tour:compose', cb),
+  tourComposed: (composeId, png) => ipcRenderer.send('tour:composed', composeId, png),
 
   onOverlayShow: (cb) => void on('overlay:show', cb),
   onOverlayWindows: (cb) => void on('overlay:windows', cb),
