@@ -5,6 +5,7 @@ import { useEffect, useState, type ReactNode } from 'react';
 import { createRoot } from 'react-dom/client';
 import type { Settings, SettingsState } from '../../ipc.ts';
 import * as I from '../icons.tsx';
+import { MODES, ModeTile } from '../modes.tsx';
 import { permissionRows } from '../permissions.tsx';
 import { T } from '../texts.ts';
 
@@ -213,12 +214,17 @@ function App() {
             </li>
           ))}
         </ol>
-        <p className="aside news">
-          <I.Video size={15} />
-          <span>
-            <b>{W.shortcut.videoTitle}</b> {W.shortcut.video(s.videoShortcutLabel)}
-          </span>
-        </p>
+        <div className="modes">
+          <span>{W.shortcut.modes}</span>
+          {MODES.map((id) => (
+            <span className="mode" key={id} title={T.modes[id].tagline}>
+              <ModeTile id={id} size={12} />
+              {T.modes[id].name}
+              {id === 'capture' && <kbd>{s.shortcutLabel}</kbd>}
+              {id === 'video' && <kbd>{s.videoShortcutLabel}</kbd>}
+            </span>
+          ))}
+        </div>
         <label className="check">
           <input type="checkbox" checked={s.openAtLogin} onChange={(e) => void update({ openAtLogin: e.target.checked })} />
           {W.shortcut.openAtLogin}

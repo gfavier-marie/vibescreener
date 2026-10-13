@@ -7,6 +7,7 @@ import { allAnnotations, type Annotation, type DocumentPage, type Note, type Ses
 import { imageUrl, type ExportFormat, type MenuAction, type MenuState, type SessionSummary, type SettingsState } from '../../ipc.ts';
 import * as I from '../icons.tsx';
 import { MenuItems } from '../menu/items.tsx';
+import { MODES, ModeTile, type ModeId } from '../modes.tsx';
 import { T } from '../texts.ts';
 import { createRecorder, type RecorderState } from './recorder.ts';
 import { Stage } from './Stage.tsx';
@@ -485,59 +486,49 @@ function App() {
     };
   });
 
-  // « Nouvelle capture », « Enregistrer une vidéo », « Enregistrer un parcours » et « Commenter un document » :
-  // au bout des vignettes, et dans l'éditeur vide.
-  const newCapture = (
-    <button type="button" className="btn primary new-capture" onClick={() => api.startCapture()}>
-      <I.Plus size={14} />
-      {T.editor.newCapture}
-      <kbd>{shortcut}</kbd>
+  // Les quatre modes : boutons au bout des vignettes, cartes dans l'éditeur vide (comme sur le site).
+  const startMode: Record<ModeId, () => void> = {
+    capture: () => api.startCapture(),
+    video: () => api.toggleVideo(),
+    documents: () => api.openDocument(),
+    tour: () => api.toggleTour(),
+  };
+  const modeKey = (id: ModeId) => (id === 'capture' ? shortcut : id === 'video' ? videoShortcut : null);
+  const modeButtons = MODES.map((id) => (
+    <button type="button" key={id} className="btn new-capture" title={T.modes[id].tagline} onClick={startMode[id]}>
+      <ModeTile id={id} size={13} />
+      {T.modes[id].name}
+      {modeKey(id) && <kbd>{modeKey(id)}</kbd>}
     </button>
-  );
-  const newVideo = (
-    <button type="button" className="btn new-capture" onClick={() => api.toggleVideo()}>
-      <I.Video size={14} />
-      {T.menu.video}
-      <kbd>{videoShortcut}</kbd>
-    </button>
-  );
-  const newTour = (
-    <button type="button" className="btn new-capture" onClick={() => api.toggleTour()}>
-      <I.Tour size={14} />
-      {T.editor.newTour}
-    </button>
-  );
-  const newDocument = (
-    <button type="button" className="btn new-capture" onClick={() => api.openDocument()}>
-      <I.Doc size={14} />
-      {T.editor.openDocument}
-    </button>
-  );
+  ));
 
   if (!session || !capture) {
     return (
       <div className={`empty ${isMac ? 'mac' : ''}`}>
-        <I.Logo size={40} />
-        <h1>{T.editor.emptyTitle}</h1>
-        <p>
-          {T.editor.emptyBefore} <kbd>{shortcut}</kbd> {T.editor.emptyAfter}
-          <br />
-          {T.editor.emptyVideoBefore} <kbd>{videoShortcut}</kbd> {T.editor.emptyVideoAfter}
-          <br />
-          {T.editor.emptyTour}
-          <br />
-          {T.editor.emptyDocument}
-        </p>
-        <div className="actions">
-          {newCapture}
-          {newVideo}
-          {newTour}
-          {newDocument}
-          <button type="button" className="btn" onClick={() => setSessionsOpen(true)}>
-            <I.Folder size={14} />
-            {T.editor.allSessions}
-          </button>
+        <I.Logo size={36} />
+        <h1>{T.modes.title}</h1>
+        <p>{T.modes.intro}</p>
+        <div className="mode-cards">
+          {MODES.map((id, i) => (
+            <button type="button" key={id} className={`mode-card mode-${id}`} onClick={startMode[id]}>
+              <span className="top">
+                <ModeTile id={id} size={20} />
+                {modeKey(id) && <kbd>{modeKey(id)}</kbd>}
+              </span>
+              <span className="name">
+                <span className="num">0{i + 1}</span>
+                {T.modes[id].name}
+              </span>
+              <span className="text">
+                <b>{T.modes[id].tagline}</b> {T.modes[id].text}
+              </span>
+            </button>
+          ))}
         </div>
+        <button type="button" className="btn" onClick={() => setSessionsOpen(true)}>
+          <I.Folder size={14} />
+          {T.editor.allSessions}
+        </button>
         {appMenuButton}
         {sessionsPanel}
       </div>
@@ -1053,10 +1044,7 @@ function App() {
             </button>
           </div>
         ))}
-        {newCapture}
-        {newVideo}
-        {newTour}
-        {newDocument}
+        {modeButtons}
       </nav>
 
       {exportMenu && <div style={{ position: 'fixed', inset: 0, zIndex: 9 }} onMouseDown={() => setExportMenu(false)} />}

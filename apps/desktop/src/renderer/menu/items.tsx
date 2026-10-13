@@ -1,8 +1,9 @@
-// Entrées du menu de l'icône (§4.7), partagées par le popover et le menu ≡ de l'éditeur :
-// capture, vidéo, parcours, document, export, sessions récentes, licence, mise à jour, appairage, réglages, quitter.
+// Entrées du menu de l'icône (§4.7), partagées par le popover et le menu ≡ de l'éditeur : les quatre modes
+// (capture d'écran, vidéo, documents, parcours), export, sessions récentes, licence, mise à jour, appairage, réglages, quitter.
 
 import type { MenuAction, MenuState } from '../../ipc.ts';
 import * as I from '../icons.tsx';
+import { MODE_ACTION, MODES, ModeTile } from '../modes.tsx';
 import { T } from '../texts.ts';
 
 /** Dans l'éditeur, « Ouvrir l'éditeur » n'a pas de sens : l'entrée est masquée. */
@@ -12,28 +13,23 @@ export function MenuItems({ s, act, inEditor = false }: { s: MenuState; act: (a:
 
   return (
     <>
-      <div className="capture">
-        <button type="button" onClick={() => act({ type: 'capture' })}>
-          <I.Capture />
-          <span style={{ flex: 1, textAlign: 'left' }}>{T.menu.capture}</span>
-          <kbd>{s.shortcut}</kbd>
-        </button>
-      </div>
-      <button type="button" className="item" onClick={() => act({ type: 'video' })}>
-        <I.Video />
-        <span>{s.video.since ? T.menu.stopVideo : T.menu.video}</span>
-        <kbd>{s.video.shortcut}</kbd>
-      </button>
-      <button type="button" className="item" onClick={() => act({ type: 'tour' })}>
-        <I.Tour />
-        <span>{s.tour ? T.menu.stopTour(s.tour.screens) : T.menu.tour}</span>
-        {s.tour && <kbd>{s.video.shortcut}</kbd>}
-      </button>
-      <button type="button" className="item" onClick={() => act({ type: 'open-document' })}>
-        <I.Doc />
-        <span>{T.menu.openDocument}</span>
-      </button>
+      {MODES.map((id) => {
+        // Pendant une vidéo ou un parcours, sa ligne l'arrête (le raccourci vidéo arrête aussi le parcours).
+        const stop = id === 'video' && s.video.since ? T.menu.stopVideo : id === 'tour' && s.tour ? T.menu.stopTour(s.tour.screens) : null;
+        const kbd = id === 'capture' ? s.shortcut : id === 'video' || stop ? s.video.shortcut : null;
+        return (
+          <button type="button" className="mode" key={id} onClick={() => act({ type: MODE_ACTION[id] })}>
+            <ModeTile id={id} />
+            <span className="txt">
+              <b>{stop ?? T.modes[id].name}</b>
+              {!stop && <small>{T.modes[id].tagline}</small>}
+            </span>
+            {kbd && <kbd>{kbd}</kbd>}
+          </button>
+        );
+      })}
 
+      <hr />
       {!inEditor && (
         <button type="button" className="item" onClick={() => act({ type: 'editor' })}>
           <I.Window />

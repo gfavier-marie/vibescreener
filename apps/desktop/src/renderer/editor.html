@@ -16,6 +16,11 @@
         --accent-text: #ff8a66; --accent-hover: #ffb199;
       }
       html, body, #root { height: 100%; background: var(--bg); color: var(--text); }
+      /* Couleurs des quatre modes sur fond sombre, celles du site. */
+      .mode-capture { --mc: #ff6a3d; --mcs: rgba(255, 106, 61, 0.16); }
+      .mode-video { --mc: #b49cff; --mcs: rgba(180, 156, 255, 0.16); }
+      .mode-documents { --mc: #6aa8ff; --mcs: rgba(106, 168, 255, 0.16); }
+      .mode-tour { --mc: #3dd9a4; --mcs: rgba(61, 217, 164, 0.16); }
       textarea::placeholder, input::placeholder { color: var(--faint); }
       .editor { display: grid; grid-template-rows: auto 1fr auto; height: 100%; }
 
@@ -59,13 +64,12 @@
       .app-menu .menu-btn:hover, .app-menu .menu-btn[aria-expanded='true'] { background: var(--border-3); color: var(--text); }
       .app-menu .menu-backdrop { position: fixed; inset: 0; z-index: 9; -webkit-app-region: no-drag; }
       .app-menu .menu { gap: 2px; min-width: 300px; max-height: calc(100vh - 70px); overflow-y: auto; color: var(--text); font-size: 13px; text-align: left; }
-      .app-menu .capture { padding: 0 0 4px; }
-      .app-menu .capture button {
-        width: 100%; height: 34px; display: flex; align-items: center; gap: 9px; padding: 0 10px; border: 0; border-radius: 7px;
-        background: var(--accent); color: #fff; font-weight: 600; box-shadow: inset 0 -1px 0 rgba(0, 0, 0, 0.18);
-      }
-      .app-menu .capture button:hover { background: #c4340a; }
-      .app-menu .capture kbd { font-size: 12px; opacity: 0.85; }
+      .app-menu .mode { display: flex; align-items: center; gap: 10px; padding: 5px 10px 5px 6px; border: 0; border-radius: 7px; background: transparent; text-align: left; }
+      .app-menu .mode:hover { background: var(--chip); }
+      .app-menu .mode .txt { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 1px; }
+      .app-menu .mode b { font-weight: 600; }
+      .app-menu .mode small { font-size: 11.5px; color: var(--muted); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+      .app-menu .mode kbd { font-size: 12px; color: var(--faint); }
       .app-menu .item {
         height: 30px; display: flex; align-items: center; gap: 10px; padding: 0 10px; border: 0; border-radius: 6px;
         background: transparent; text-align: left;
@@ -226,18 +230,33 @@
       .thumb[aria-current='true'] .img { box-shadow: 0 0 0 2px var(--bg), 0 0 0 4px var(--accent); }
       .thumb .cap { font-size: 11.5px; color: var(--muted); }
       .thumb[aria-current='true'] .cap { color: var(--text); font-weight: 600; }
-      /* « Nouvelle capture » : un vrai bouton, qui ne ressemble pas à une vignette. */
-      .btn.new-capture { flex: none; height: 36px; padding: 0 14px; border-radius: 9px; gap: 8px; }
-      .new-capture kbd { font-weight: 500; opacity: 0.85; }
+      /* Les quatre modes au bout des vignettes : de vrais boutons, qui ne ressemblent pas à une vignette. */
+      .btn.new-capture { flex: none; height: 36px; padding: 0 12px 0 7px; border-radius: 9px; gap: 8px; border-color: var(--border-3); color: var(--text-2); }
+      .btn.new-capture:hover { color: var(--text); border-color: var(--muted); }
+      .new-capture .mode-tile { width: 24px; height: 24px; border-radius: 6px; }
+      .new-capture kbd { font-weight: 500; color: var(--faint); }
 
       .empty { position: relative; height: 100%; display: grid; place-content: center; justify-items: center; gap: 14px; text-align: center; color: var(--muted); font-size: 14px; }
       /* Seul le haut déplace la fenêtre : une zone de déplacement ne reçoit pas les fichiers déposés (Windows). */
       .empty::before { content: ''; position: absolute; inset: 0 0 auto 0; height: 52px; -webkit-app-region: drag; }
-      .empty h1 { color: var(--text); font-size: 18px; font-weight: 600; }
-      .empty .actions { display: flex; flex-wrap: wrap; justify-content: center; gap: 10px; margin-top: 4px; max-width: 760px; }
-      .empty .btn { height: 36px; padding: 0 14px; border-radius: 9px; -webkit-app-region: no-drag; }
-      .empty .btn:not(.primary) { background: transparent; border-color: var(--border-3); color: var(--text-2); }
-      .empty p kbd { display: inline-block; padding: 1px 6px; margin: 0 2px; border: 1px solid var(--border-3); border-radius: 5px; color: var(--text); }
+      .empty h1 { color: var(--text); font-size: 20px; font-weight: 700; letter-spacing: -0.02em; }
+      .empty > p { max-width: 520px; line-height: 1.5; }
+      .empty .btn { height: 36px; padding: 0 14px; border-radius: 9px; background: transparent; border-color: var(--border-3); color: var(--text-2); -webkit-app-region: no-drag; }
+      /* Les quatre modes en cartes, comme sur le site : couleur, raccourci, nom, phrase et mode d'emploi. */
+      .mode-cards { display: grid; grid-template-columns: repeat(2, minmax(0, 270px)); gap: 12px; margin: 8px 0 6px; padding: 0 24px; }
+      @media (min-width: 1180px) { .mode-cards { grid-template-columns: repeat(4, minmax(0, 250px)); } }
+      .mode-card {
+        display: flex; flex-direction: column; gap: 10px; padding: 14px 16px 16px; border: 1px solid var(--border-2); border-radius: 14px;
+        background: var(--header); color: var(--text); text-align: left; -webkit-app-region: no-drag; transition: border-color 0.15s, background 0.15s;
+      }
+      .mode-card:hover { border-color: var(--mc); background: var(--card); }
+      .mode-card .top { display: flex; align-items: center; justify-content: space-between; gap: 8px; }
+      .mode-card .mode-tile { width: 38px; height: 38px; border-radius: 10px; }
+      .mode-card kbd { padding: 2px 7px; border-radius: 6px; background: var(--chip); color: var(--text-2); font-size: 12px; }
+      .mode-card .name { display: flex; align-items: baseline; gap: 8px; font-size: 16px; font-weight: 700; letter-spacing: -0.01em; }
+      .mode-card .num { font: 500 12px var(--mono); color: var(--mc); }
+      .mode-card .text { font-size: 12.5px; line-height: 1.5; color: var(--muted); }
+      .mode-card .text b { color: var(--text-2); font-weight: 600; }
       .toast {
         position: fixed; left: 50%; bottom: 140px; transform: translateX(-50%); max-width: 70%; padding: 9px 14px; z-index: 30;
         border-radius: 10px; background: #f2f2f3; color: #1d1d1f; font-weight: 500; box-shadow: 0 10px 28px rgba(0, 0, 0, 0.4); word-break: break-all;

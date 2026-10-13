@@ -135,7 +135,8 @@ Priorités : **[M]** indispensable en V1, **[S]** souhaité en V1, **[C]** plus 
 
 ### 4.7 Icône et menu
 
-- **[M]** Menu : Nouvelle session, Ouvrir l'éditeur, Exporter le PDF, Appairer une tablette (QR), Réglages, Quitter. Plus « Commenter un document… » (§4.10).
+- **[M]** Menu : Nouvelle session, Ouvrir l'éditeur, Exporter le PDF, Appairer une tablette (QR), Réglages, Quitter.
+- En tête du menu, les quatre modes, dans l'ordre et sous les noms du site : Capture d'écran (⌃⌥⌘P), Vidéo (⌃⌥⌘R), Documents (§4.10), Parcours (§4.11). Chacun a sa couleur et sa phrase ; les mêmes, en cartes, remplissent l'éditeur vide (demandé le 13 oct. 2026).
 - **[S]** L'icône signale l'état : session active, nombre de points, tablette connectée, transcriptions en cours.
 - Les mêmes entrées sont reprises dans le menu ≡ en haut à droite de l'éditeur (demandé le 7 oct. 2026).
 
@@ -153,7 +154,7 @@ Priorités : **[M]** indispensable en V1, **[S]** souhaité en V1, **[C]** plus 
 Un PDF, un Word, un Excel ou un PowerPoint s'ouvre dans l'app et se commente comme une capture.
 
 - Ouverture :
-  - par « Commenter un document… » (menu de l'icône et menu ≡) ;
+  - par le mode « Documents » (menu de l'icône et menu ≡) ;
   - par un bouton de l'éditeur (éditeur vide et bout des vignettes) ;
   - en déposant le fichier sur l'éditeur.
 - Formats : .pdf, .docx/.docm/.dotx, .xlsx/.xlsm/.xltx, .pptx/.pptm/.potx. Les anciens formats (.doc, .xls, .ppt) et les fichiers protégés par mot de passe sont refusés avec un message.
@@ -189,7 +190,7 @@ Un PDF, un Word, un Excel ou un PowerPoint s'ouvre dans l'app et se commente com
 
 On se promène vite dans un logiciel ; à l'arrêt, toute son interface est en captures, prête à commenter ou à donner à l'IA.
 
-- Démarrage : « Enregistrer un parcours… » (menu de l'icône, menu ≡, éditeur vide et bout des vignettes). L'overlay de capture s'ouvre : un clic choisit la fenêtre à suivre (hors de toute fenêtre, l'écran entier), Échap annule. Même blocage que la capture après l'essai.
+- Démarrage : le mode « Parcours » (menu de l'icône, menu ≡, éditeur vide et bout des vignettes). L'overlay de capture s'ouvre : un clic choisit la fenêtre à suivre (hors de toute fenêtre, l'écran entier), Échap annule. Même blocage que la capture après l'essai.
 - Pendant le parcours :
   - pas de micro, pas de clics globaux (ni Accessibilité) : tout se lit dans les images de la fenêtre ;
   - l'icône passe en enregistrement, son menu dit « Arrêter le parcours (N écrans) » ;

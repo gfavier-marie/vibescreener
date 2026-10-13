@@ -33,10 +33,11 @@ export const Logo = ({ size = 28, color = 'var(--accent)', hole = '#fff', ...p }
   </svg>
 );
 
+// Les icônes des quatre modes (capture, vidéo, documents, parcours) sont celles du site, dessinées sur 18.
 export const Capture = (p: Props) => (
-  <Stroke {...p} width={1.6}>
-    <path d="M2 5V3.5A1.5 1.5 0 0 1 3.5 2H5M11 2h1.5A1.5 1.5 0 0 1 14 3.5V5M14 11v1.5a1.5 1.5 0 0 1-1.5 1.5H11M5 14H3.5A1.5 1.5 0 0 1 2 12.5V11" />
-    <circle cx="8" cy="8" r="2" />
+  <Stroke {...p} box={18} width={1.8}>
+    <path d="M2 6V3.5A1.5 1.5 0 0 1 3.5 2H6M12 2h2.5A1.5 1.5 0 0 1 16 3.5V6M16 12v2.5a1.5 1.5 0 0 1-1.5 1.5H12M6 16H3.5A1.5 1.5 0 0 1 2 14.5V12" />
+    <circle cx="9" cy="9" r="2.2" fill="currentColor" stroke="none" />
   </Stroke>
 );
 /** Carré : arrêter l'enregistrement. */
@@ -45,18 +46,19 @@ export const Stop = (p: Props) => (
     <rect x="4" y="4" width="8" height="8" rx="1.5" />
   </Stroke>
 );
-/** Caméra : mode vidéo. */
+/** Bouton d'enregistrement : mode vidéo. */
 export const Video = (p: Props) => (
-  <Stroke {...p}>
-    <rect x="1.5" y="4" width="9" height="8" rx="1.5" />
-    <path d="M10.5 7l4-2v6l-4-2" />
+  <Stroke {...p} box={18} width={1.6}>
+    <circle cx="9" cy="9" r="7.2" />
+    <circle cx="9" cy="9" r="3.6" fill="#ff453a" stroke="none" />
   </Stroke>
 );
-/** Parcours : des écrans empilés. */
+/** Parcours : deux écrans reliés. */
 export const Tour = (p: Props) => (
-  <Stroke {...p}>
-    <rect x="4.5" y="1.5" width="10" height="9" rx="1.5" />
-    <path d="M11.5 13.5h-8a2 2 0 0 1-2-2v-6" />
+  <Stroke {...p} box={18} width={1.6}>
+    <rect x="2" y="2" width="9" height="6.5" rx="1.3" />
+    <rect x="7" y="9.5" width="9" height="6.5" rx="1.3" />
+    <path d="M4.5 8.5v3.2a1.3 1.3 0 0 0 1.3 1.3H7" />
   </Stroke>
 );
 export const Window = (p: Props) => (
@@ -221,9 +223,9 @@ export const Picture = (p: Props) => (
   </Stroke>
 );
 export const Doc = (p: Props) => (
-  <Stroke {...p} width={1.3}>
-    <path d="M4 1.5h5.5L12.5 4.5v10h-8.5z" />
-    <path d="M9.5 1.5v3h3M6 8.5h4.5M6 11h4.5" />
+  <Stroke {...p} box={18} width={1.6}>
+    <path d="M10.5 2H5a1.5 1.5 0 0 0-1.5 1.5v11A1.5 1.5 0 0 0 5 16h8a1.5 1.5 0 0 0 1.5-1.5V6z" />
+    <path d="M10.5 2v4h4M6.5 9.5h5M6.5 12.5h3.5" />
   </Stroke>
 );
 

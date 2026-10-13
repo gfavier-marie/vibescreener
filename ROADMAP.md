@@ -536,3 +536,12 @@ Lignes `TOUR {json}` : par image figée (défilement trouvé, durée de `findScr
 - [x] Landing reprise du canevas Claude Design « VibeScreener — landing, quatre usages » : le sélecteur Capture / Vidéo de l'arrivée devient quatre entrées (Capture d'écran, Vidéo, Documents, Parcours) ; section « Un outil, quatre façons de relire » (quatre cartes animées, une couleur par mode) ; barre collante des quatre modes, le chapitre lu mis en avant ; quatre chapitres numérotés (en-tête, « Idéal pour… », démo animée et sa frise, « Comment ça marche »), dont deux nouvelles démos : Documents (un Word glissé, deux points dictés, copie commentée ouverte avec ses commentaires) et Parcours (choix de la fenêtre, une capture par écran stable, page défilée assemblée, éditeur) ; fonctionnalités communes aux quatre modes ; essai interactif avec onglets Capture d'écran / Vidéo ; FAQ rangée par mode ; cinq langues ; vérifiée en local à 375 px et au bureau
 - [x] Plus de mode global sur la page : sélecteur fixé et variantes vidéo des sections, des cartes et du calculateur retirés (64 textes de moins par langue)
 - [x] Site déployé sur vibescreener.dev le 12 oct. (`pnpm site:deploy`)
+
+## App : quatre modes, aussi clairs que sur le site (demandé le 13 oct.)
+
+- [x] Les quatre modes sous les noms, dans l'ordre, avec les couleurs et les icônes du site : Capture d'écran, Vidéo, Documents, Parcours (`renderer/modes.tsx`)
+- [x] Éditeur vide : quatre cartes (numéro, raccourci, nom, phrase et mode d'emploi) au lieu de quatre lignes de texte et de cinq boutons
+- [x] Menu de l'icône et menu ≡ : les quatre modes en tête, chacun avec sa pastille de couleur et sa phrase ; leur ligne arrête la vidéo ou le parcours en cours
+- [x] Bout des vignettes : les quatre mêmes boutons, à égalité ; accueil (étape 3) : la ligne des quatre modes remplace l'encart « Nouveau : le mode vidéo »
+- [x] Cinq langues ; vérifié dans le navigateur (pages construites, API factice), pas encore dans l'app lancée
+- [x] Version **0.15.1** (13 oct.), publiée sur ton « déploie en ligne »
