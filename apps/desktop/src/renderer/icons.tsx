@@ -127,6 +127,13 @@ export const Screen = (p: Props) => (
     <circle cx="8" cy="7" r="1.6" fill="currentColor" stroke="none" />
   </Stroke>
 );
+/** Pointeur : l'Accessibilité, qui laisse voir les clics. */
+export const Pointer = (p: Props) => (
+  <Stroke {...p} width={1.3}>
+    <path d="M4 2.5l8.5 4.3-3.7 1.2-1.4 3.8z" />
+    <path d="M8.8 8l3.2 3.2" />
+  </Stroke>
+);
 export const Waveform = (p: Props) => (
   <Stroke {...p} width={1.3}>
     <path d="M2 8h1M5 5v6M8 3v10M11 6v4M14 8h0" />

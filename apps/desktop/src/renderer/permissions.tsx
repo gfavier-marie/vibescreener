@@ -1,5 +1,6 @@
 // Autorisations du système, montrées par l'assistant (étape 1) et par l'onglet Autorisations des réglages :
-// mêmes lignes, même demande (askPermission). L'Accessibilité (macOS) ne sert qu'au mode vidéo : facultative.
+// mêmes lignes, même demande (askPermission), même bouton. L'Accessibilité (macOS) ne sert qu'au mode vidéo :
+// facultative, ce que dit sa ligne ; « Continuer » ne l'attend pas.
 
 import type { ReactNode } from 'react';
 import type { SettingsState } from '../ipc.ts';
@@ -12,7 +13,6 @@ export type PermissionRow = {
   title: string;
   why: string;
   ok: boolean;
-  optional?: boolean;
 };
 
 export function permissionRows(s: SettingsState): PermissionRow[] {
@@ -29,11 +29,10 @@ export function permissionRows(s: SettingsState): PermissionRow[] {
     },
     {
       kind: 'accessibility',
-      icon: <I.Video size={20} />,
+      icon: <I.Pointer size={20} />,
       title: P.accessibility,
       why: P.accessibilityWhy,
       ok: s.permissions.accessibility === 'granted',
-      optional: true,
     },
   ];
   return mac ? rows : rows.filter((r) => r.kind === 'microphone');

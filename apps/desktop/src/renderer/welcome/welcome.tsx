@@ -87,7 +87,7 @@ function App() {
               {r.ok ? (
                 <Granted />
               ) : (
-                <button type="button" className={`btn tall ${r.optional ? '' : 'primary'}`} onClick={() => void api.askPermission(r.kind)}>
+                <button type="button" className="btn tall primary" onClick={() => void api.askPermission(r.kind)}>
                   {W.permissions.allow}
                 </button>
               )}

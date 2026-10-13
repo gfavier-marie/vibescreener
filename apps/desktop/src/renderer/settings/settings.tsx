@@ -385,7 +385,7 @@ function App() {
             </small>
           </span>
           {!r.ok && (
-            <button type="button" className={`btn ${r.optional ? '' : 'primary'}`} onClick={() => void api.askPermission(r.kind)}>
+            <button type="button" className="btn primary" onClick={() => void api.askPermission(r.kind)}>
               {T.welcome.permissions.allow}
             </button>
           )}

@@ -545,3 +545,4 @@ Lignes `TOUR {json}` : par image figée (défilement trouvé, durée de `findScr
 - [x] Bout des vignettes : les quatre mêmes boutons, à égalité ; accueil (étape 3) : la ligne des quatre modes remplace l'encart « Nouveau : le mode vidéo »
 - [x] Cinq langues ; vérifié dans le navigateur (pages construites, API factice), pas encore dans l'app lancée
 - [x] Version **0.15.1** (13 oct.), publiée sur ton « déploie en ligne »
+- [x] Assistant et réglages : la ligne Accessibilité a le même bouton « Autoriser » que les autres (sa ligne dit déjà « Facultative ») et une icône de pointeur, au lieu du bouton d'enregistrement rouge du mode vidéo ; version **0.15.2** (13 oct.)
