@@ -128,9 +128,15 @@ describe('documents', { timeout: 30_000 }, () => {
     };
     const subtype = (d: PDFDict) => d.get(PDFName.of('Subtype'))!.toString();
     const contents = (d: PDFDict) => (d.lookup(PDFName.of('Contents')) as PDFHexString).decodeText();
-    expect(annots(0).map(subtype)).toEqual(['/Text', '/Square']);
+    expect(annots(0).map(subtype)).toEqual(['/Text', '/Popup', '/Square', '/Popup']);
     expect(annots(1)).toEqual([]);
-    expect(annots(2).map(subtype)).toEqual(['/Line']);
+    expect(annots(2).map(subtype)).toEqual(['/Line', '/Popup']);
+    // Chaque note a sa fenêtre (Popup), fermée, qui la désigne en retour.
+    for (const [note, popup] of [annots(0).slice(0, 2), annots(0).slice(2), annots(2)]) {
+      expect(copy.context.lookup(note!.get(PDFName.of('Popup')))).toBe(popup);
+      expect(copy.context.lookup(popup!.get(PDFName.of('Parent')))).toBe(note);
+      expect(popup!.get(PDFName.of('Open'))!.toString()).toBe('false');
+    }
     expect(contents(annots(0)[0]!)).toBe("#1 — Mettre 15 % (1 croquis dans l'export VibeScreener)");
     expect(contents(annots(2)[0]!)).toBe('#3 — (sans commentaire)');
     // La pointe de la goutte est sur le point visé : coin bas gauche de la note, à la marge d'un trait près.

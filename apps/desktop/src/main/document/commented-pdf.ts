@@ -173,24 +173,34 @@ export async function writeCommentedPdf(original: Uint8Array, comments: PdfComme
       };
     }
 
-    // Boîte de l'apparence dans le repère affiché (marge d'un trait : rien n'est rogné), puis Rect dans
-    // le repère du fichier : les coins de cette boîte ramenés dans la page.
+    // Rectangle du repère affiché ramené dans celui du fichier : la boîte de ses quatre coins.
+    const toRect = (x0: number, y0: number, x1: number, y1: number) => {
+      const pts = [
+        [x0, y0],
+        [x1, y0],
+        [x0, y1],
+        [x1, y1],
+      ].map(([x, y]) => P(x! / Wd, 1 - y! / Hd));
+      return [Math.min(...pts.map((p) => p[0])), Math.min(...pts.map((p) => p[1])), Math.max(...pts.map((p) => p[0])), Math.max(...pts.map((p) => p[1]))];
+    };
+    // Boîte de l'apparence dans le repère affiché (marge d'un trait : rien n'est rogné).
     const bx0 = Math.min(...shape.xs) - lw, by0 = Math.min(...shape.ys) - lw;
     const bx1 = Math.max(...shape.xs) + lw, by1 = Math.max(...shape.ys) + lw;
     const at: At = (x, y) => [x - bx0, y - by0];
-    const pdfCorners = [
-      [bx0, by0],
-      [bx1, by0],
-      [bx0, by1],
-      [bx1, by1],
-    ].map(([x, y]) => P(x! / Wd, 1 - y! / Hd));
-    const rect = [Math.min(...pdfCorners.map((p) => p[0])), Math.min(...pdfCorners.map((p) => p[1])), Math.max(...pdfCorners.map((p) => p[0])), Math.max(...pdfCorners.map((p) => p[1]))];
+    const rect = toRect(bx0, by0, bx1, by1);
+    // Fenêtre de la note, fermée : sans elle, Aperçu affiche la pastille sans jamais ouvrir le texte.
+    // À droite de l'annotation, à gauche si la place manque, toujours dans la page.
+    const pw = Math.min(220, Wd), ph = Math.min(110, Hd);
+    const px = Math.max(0, Math.min(bx1 + 6 + pw <= Wd ? bx1 + 6 : bx0 - 6 - pw, Wd - pw));
+    const py = Math.max(0, Math.min(by1, Hd) - ph);
     const cos = Math.round(Math.cos((rotate * Math.PI) / 180)), sin = Math.round(Math.sin((rotate * Math.PI) / 180));
     const appearance = ctx.formXObject([pushGraphicsState(), ...shape.ops(at), popGraphicsState()], {
       BBox: [0, 0, bx1 - bx0, by1 - by0],
       Matrix: [cos, sin, -sin, cos, 0, 0],
       Resources: { Font: { F1: font.ref } },
     });
+    const annotRef = ctx.nextRef();
+    const popupRef = ctx.register(ctx.obj({ Type: 'Annot', Subtype: 'Popup', Rect: toRect(px, py, px + pw, py + ph), Parent: annotRef, Open: false }));
     const annot = ctx.obj({
       Type: 'Annot',
       Subtype: shape.subtype,
@@ -203,9 +213,12 @@ export async function writeCommentedPdf(original: Uint8Array, comments: PdfComme
       C: [...ORANGE],
       F: 4, // imprimée
       AP: { N: ctx.register(appearance) },
+      Popup: popupRef,
       ...shape.extra(rect),
     });
-    page.node.addAnnot(ctx.register(annot));
+    ctx.assign(annotRef, annot);
+    page.node.addAnnot(annotRef);
+    page.node.addAnnot(popupRef);
   }
 
   const pages = doc.getPages();
