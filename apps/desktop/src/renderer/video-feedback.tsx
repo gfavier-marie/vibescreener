@@ -21,6 +21,14 @@ function App() {
     written.current = false;
     fieldRef.current?.focus();
   }, [state?.writing]);
+  // Point posé : le champ est prêt, la fenêtre prend le clavier (video-feedback.ts) ; la première lettre lance l'écriture.
+  const clickAt = state?.click?.at;
+  useEffect(() => {
+    if (!clickAt || !fieldRef.current) return;
+    fieldRef.current.value = '';
+    fieldRef.current.focus();
+  }, [clickAt]);
+  useEffect(() => window.pastille.onVideoEndWriting(() => finishWriting(fieldRef.current?.value ?? null)), []);
   function finishWriting(text: string | null) {
     if (written.current) return;
     written.current = true;
@@ -97,13 +105,14 @@ function App() {
         </div>
       </> : <>
         {!state.writing && <div className="feedback-meta" role="status">{state.voiced ? T.editor.recording : c ? (state.kept ? '' : v.speak) : v.microphone}</div>}
-        {/* Champ toujours là, comme la bulle du mode capture. La fenêtre ne prend pas le clavier
-            (l'app relue le garde) : un clic dans le champ le demande, puis on tape. */}
+        {/* Champ toujours là, comme la bulle du mode capture. Sans point, la fenêtre ne prend pas le clavier
+            (l'app relue le garde) : un clic dans le champ le demande, puis on tape. Après un point, on tape directement. */}
         <textarea ref={fieldRef} className={`feedback-text${state.writing ? ' writing' : ''}`} rows={state.writing ? 2 : 1}
-          readOnly={!state.writing} placeholder={v.writePlaceholder}
+          readOnly={!state.writing && !c} placeholder={v.writePlaceholder}
           onMouseDown={(e) => { if (!state.writing) { e.preventDefault(); void act('write'); } }}
+          onInput={() => { if (!state.writing) void act('write'); }}
           onKeyDown={(e) => {
-            if (!state.writing) return;
+            if (!state.writing) { if (e.key === 'Enter') e.preventDefault(); return; } // écriture pas encore ouverte
             if (e.key === 'Enter' && !e.shiftKey && !e.nativeEvent.isComposing) { e.preventDefault(); finishWriting(e.currentTarget.value); }
             else if (e.key === 'Escape') finishWriting(null);
           }}

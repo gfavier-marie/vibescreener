@@ -547,3 +547,4 @@ Lignes `TOUR {json}` : par image figée (défilement trouvé, durée de `findScr
 - [x] Version **0.15.1** (13 oct.), publiée sur ton « déploie en ligne »
 - [x] Assistant et réglages : la ligne Accessibilité a le même bouton « Autoriser » que les autres (sa ligne dit déjà « Facultative ») et une icône de pointeur, au lieu du bouton d'enregistrement rouge du mode vidéo ; version **0.15.2** (13 oct.)
 - [x] Copie commentée PDF : chaque note a sa fenêtre de note (annotation Popup, fermée, à côté de la pastille), comme Acrobat ; sans elle, on voyait les pastilles sans pouvoir lire les commentaires. Pas encore vérifié dans Aperçu ; version **0.15.3** (13 oct.)
+- [x] Mode vidéo : après ⌘ + clic, le champ du point a le clavier (on tape ou on parle) ; défiler la page termine le point comme un clic seul, en gardant le texte en cours (le point est dessiné sur l'écran, pas sur la page). Pas encore essayé dans l'app ; version **0.15.4** (15 oct.)

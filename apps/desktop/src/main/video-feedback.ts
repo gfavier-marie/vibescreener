@@ -1,6 +1,6 @@
 // Retour visuel de la vidéo : fenêtres transparentes, sans focus, qui laissent passer les clics
 // sauf sous le bandeau, et partout tant que ⌘ / Ctrl est tenu : le clic pose alors un point sans atteindre l'app.
-// Elles ne prennent le clavier que le temps d'un commentaire écrit.
+// Elles ne prennent le clavier que pendant un point (champ prêt à écrire) ou un commentaire écrit.
 import { app, BrowserWindow, ipcMain, screen } from 'electron';
 import type { VideoFeedback } from '../ipc.ts';
 
@@ -11,7 +11,7 @@ export function createVideoFeedback(opts: {
   let windows: { displayId: number; win: BrowserWindow; catching: boolean }[] = [];
   let state: VideoFeedback = null;
   let hoveredId: number | null = null;
-  let writerId: number | null = null; // bandeau qui a le champ du commentaire écrit
+  let writerId: number | null = null; // bandeau qui a le clavier (point posé ou commentaire écrit)
   const fromWindow = (senderId: number) => windows.find(({ win }) => !win.isDestroyed() && win.webContents.id === senderId);
 
   // Seulement aux changements : l'état arrive dix fois par seconde avec le micro.
@@ -94,19 +94,25 @@ export function createVideoFeedback(opts: {
     catchMouse();
   }
 
-  /** Commentaire écrit : le bandeau qui l'a demandé prend le clavier, puis le rend. */
-  function focus(senderId: number) {
-    const w = fromWindow(senderId);
+  /** Point posé ou commentaire écrit : le bandeau concerné prend le clavier, puis le rend. */
+  function take(w: (typeof windows)[number] | undefined) {
     if (!w) return;
-    writerId = senderId;
+    writerId = w.win.webContents.id;
     w.win.setFocusable(true);
     if (process.platform === 'darwin') app.focus({ steal: true });
     w.win.focus();
+  }
+  const focus = (senderId: number) => take(fromWindow(senderId));
+  const focusDisplay = (displayId: number) => take(windows.find((w) => w.displayId === displayId && !w.win.isDestroyed()));
+  /** Fin d'un commentaire écrit lancée d'ici (défilement) : le bandeau envoie son texte. */
+  function endWriting() {
+    const w = writerId === null ? undefined : fromWindow(writerId);
+    w?.win.webContents.send('video:end-writing');
   }
   function release() {
     writerId = null;
     for (const { win } of windows) if (!win.isDestroyed() && win.isFocusable()) win.setFocusable(false);
   }
 
-  return { start, stop, update, focus, release, pointerInControls: () => hoveredId !== null, owns: (senderId: number) => !!fromWindow(senderId), isWindow: (win: BrowserWindow) => windows.some((w) => w.win === win) };
+  return { start, stop, update, focus, focusDisplay, endWriting, release, pointerInControls: () => hoveredId !== null, owns: (senderId: number) => !!fromWindow(senderId), isWindow: (win: BrowserWindow) => windows.some((w) => w.win === win) };
 }

@@ -1,7 +1,7 @@
 // Clics de souris dans tout le système, pour le mode vidéo : Electron n'écoute que le clavier
 // (globalShortcut). uiohook-napi (libuiohook) reçoit les clics des autres apps ; sur macOS, il
 // exige l'autorisation Accessibilité. On n'écoute que le bouton gauche, et seulement pendant l'enregistrement.
-// ⌘ + clic (Ctrl sous Windows) pose un point ; un clic seul sert à naviguer.
+// ⌘ + clic (Ctrl sous Windows) pose un point ; un clic seul ou la molette sert à naviguer.
 // Le module natif n'est chargé qu'au premier enregistrement : s'il échoue, seul le mode vidéo est touché.
 
 import { screen, systemPreferences } from 'electron';
@@ -22,6 +22,7 @@ export function createClicks(opts: {
   ignore: (p: Point) => boolean; // clic sur une de nos fenêtres
   onClick: (p: Point, at: number) => void; // ⌘ + clic : position globale en DIP, Date.now() du clic
   onNavigate?: () => void; // clic seul
+  onScroll?: (p: Point) => void; // molette ou trackpad, même sur nos fenêtres : la page bouge sous le point
   onArmed?: (armed: boolean) => void; // ⌘ / Ctrl tenu : nos fenêtres doivent prendre le clic avant l'app
   onGesture?: (displayId: number, geometry: Geometry | undefined, crop: boolean, done: boolean) => void;
 }) {
@@ -64,6 +65,7 @@ export function createClicks(opts: {
     }
   }
   const onMouseMove = (e: UiohookMouseEvent) => updateGesture(e, false);
+  const onWheel = () => !gesture && opts.onScroll?.(screen.getCursorScreenPoint());
   const onMouseUp = (e: UiohookMouseEvent) => e.button === LEFT_BUTTON && updateGesture(e, true);
   const onInput = (e: HookEvent) => {
     arm(pointKey(e));
@@ -82,6 +84,7 @@ export function createClicks(opts: {
       hook.on('mousedown', onMouseDown);
       hook.on('mousemove', onMouseMove);
       hook.on('mouseup', onMouseUp);
+      hook.on('wheel', onWheel);
       hook.on('input', onInput);
       try {
         hook.start();
@@ -89,6 +92,7 @@ export function createClicks(opts: {
         hook.off('mousedown', onMouseDown);
         hook.off('mousemove', onMouseMove);
         hook.off('mouseup', onMouseUp);
+      hook.off('wheel', onWheel);
         hook.off('input', onInput);
         throw err;
       }
@@ -99,6 +103,7 @@ export function createClicks(opts: {
       hook.off('mousedown', onMouseDown);
       hook.off('mousemove', onMouseMove);
       hook.off('mouseup', onMouseUp);
+      hook.off('wheel', onWheel);
       hook.off('input', onInput);
       hook.stop();
       running = false;

@@ -334,7 +334,7 @@ let videoFeedbackState: VideoFeedback = null;
 let videoInspiration = false;
 let videoActionBusy = false;
 let videoArmed = false; // ⌘ / Ctrl tenu
-let videoWriting: { annotationId?: string } | null = null; // commentaire écrit en cours ; sans point : remarque générale
+let videoWriting: { annotationId?: string; navigate?: boolean } | null = null; // commentaire écrit en cours ; sans point : remarque générale
 let videoActionError: string | undefined;
 function refreshVideoFeedback() {
   videoFeedback.update(videoFeedbackState && {
@@ -374,16 +374,18 @@ const video = createVideo({
   nextNumber: () => store.get()?.captures.reduce((n, c) => n + c.annotations.length, 1) ?? 1,
   onFeedback: (state) => {
     if (state?.click?.at !== videoFeedbackState?.click?.at) videoActionError = undefined;
+    if (!state?.click && !videoWriting) videoFeedback.release(); // point terminé : le clavier revient
     videoFeedbackState = state;
     refreshVideoFeedback();
   },
   onPoint: (point) => tablet?.setFocus(point?.annotationId ?? null, !video.isRecording()),
 });
 const inside = (p: { x: number; y: number }, r: Electron.Rectangle) => p.x >= r.x && p.y >= r.y && p.x < r.x + r.width && p.y < r.y + r.height;
+// Nos fenêtres ne se commentent pas ; la barre ne compte que sous la pilule (le reste laisse passer les clics).
+const overOurWindows = (p: { x: number; y: number }) =>
+  videoFeedback.pointerInControls() || menubar.pointerInBar() || BrowserWindow.getAllWindows().some((w) => w.isVisible() && !menubar.isBar(w) && !videoFeedback.isWindow(w) && inside(p, w.getBounds()));
 const clicks = createClicks({
-  // Nos fenêtres ne se commentent pas ; la barre ne compte que sous la pilule (le reste laisse passer les clics).
-  ignore: (p) =>
-    videoInspiration || videoActionBusy || !!videoWriting || videoFeedback.pointerInControls() || menubar.pointerInBar() || BrowserWindow.getAllWindows().some((w) => w.isVisible() && !menubar.isBar(w) && !videoFeedback.isWindow(w) && inside(p, w.getBounds())),
+  ignore: (p) => videoInspiration || videoActionBusy || !!videoWriting || overOurWindows(p),
   onClick: (p, at) => {
     const d = screen.getDisplayNearestPoint(p);
     video.onClick({
@@ -396,11 +398,25 @@ const clicks = createClicks({
     });
   },
   onNavigate: () => video.onNavigate(),
+  // Le point est dessiné sur l'écran, pas sur la page : défiler le termine comme un clic seul,
+  // après avoir gardé le commentaire en cours d'écriture.
+  onScroll: (p) => {
+    if (!videoFeedbackState?.click || videoInspiration || videoActionBusy || overOurWindows(p)) return;
+    if (videoWriting) {
+      videoWriting.navigate = true;
+      return videoFeedback.endWriting();
+    }
+    video.onNavigate();
+  },
   onArmed: (armed) => {
     videoArmed = armed;
     refreshVideoFeedback();
   },
-  onGesture: (displayId, geometry, crop, done) => video.onGesture(displayId, geometry, crop, done),
+  onGesture: (displayId, geometry, crop, done) => {
+    video.onGesture(displayId, geometry, crop, done);
+    // Point posé : son champ prend le clavier, on peut taper au lieu de parler.
+    if (done && videoFeedbackState?.click?.displayId === displayId && !videoInspiration) videoFeedback.focusDisplay(displayId);
+  },
 });
 let videoStarting = false;
 let videoFinishing: Promise<VideoSummary> | null = null;
@@ -1223,6 +1239,7 @@ ipcMain.handle('video:text', async (e, text: string | null) => {
   videoWriting = null;
   videoFeedback.release();
   video.resume();
+  if (target.navigate) video.onNavigate(); // défilement pendant l'écriture : le point se termine aussi
   refreshVideoFeedback();
   const typed = text?.trim();
   if (!typed) return;
