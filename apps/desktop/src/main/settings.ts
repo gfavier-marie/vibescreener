@@ -18,7 +18,7 @@ export type Settings = {
   apiModel: string;
   glossary: string; // prompt initial de Whisper
   instructions: string; // texte d'instructions en tête du PDF
-  context: string; // contexte du projet (projet, stack, page testée), repris par la session ouverte et les suivantes
+  context: string; // contexte réglé avant les projets : donné une fois au premier projet (session-store), plus modifiable
   firstRunDone: boolean;
   copyPdf: boolean; // PDF mis dans le presse-papiers après l'export
   openAtLogin: boolean;

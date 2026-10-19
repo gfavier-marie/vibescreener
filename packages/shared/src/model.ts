@@ -1,9 +1,19 @@
-// Modèle de données d'une session de revue (cahier des charges §8.2).
+// Modèle de données d'une session de revue (cahier des charges §8.2), rangée dans un projet.
+
+/** Projet : un nom et un contexte, repris par chacune de ses revues (sessions). */
+export type Project = {
+  id: string;
+  name: string;
+  context?: string;
+  createdAt: string;
+  updatedAt: string;
+};
 
 export type Session = {
   id: string;
   name: string;
-  context?: string;
+  projectId?: string; // absent avant les projets : rangée dans le premier projet
+  context?: string; // copie du contexte du projet
   notes?: Note[]; // remarques générales, rattachées à aucun point
   createdAt: string;
   updatedAt: string;

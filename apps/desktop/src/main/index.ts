@@ -23,7 +23,7 @@ import {
   shell,
   systemPreferences,
 } from 'electron';
-import { allAnnotations, findAnnotation, findComment, isDocumentSession, isLang, isSkippedPage, pickLang, type Geometry, type Session } from '@pastille/shared';
+import { allAnnotations, findAnnotation, findComment, isDocumentSession, isLang, isSkippedPage, pickLang, slugify, SHARE_EXT, type Geometry, type Session } from '@pastille/shared';
 import type { CaptureResult, EditorFocus, ExportFormat, ExportResult, MenuAction, MenuState, PairingState, SettingsState, SettingsTab, TourRegion, VideoFeedback } from '../ipc.ts';
 import { createCapture, followWindow, listWindows, windowTarget, type CapturedImage, type ChosenWindow } from './capture.ts';
 import { createClicks } from './clicks.ts';
@@ -39,6 +39,7 @@ import { createFakeSession } from './export/fixture.ts';
 import { createSampleDocx, createSamplePdf, createSamplePptx, createSampleXlsx } from './document/fixture.ts';
 import { createMcp, MCP_PORT } from './mcp.ts';
 import { createSessionStore } from './session-store.ts';
+import { createSharing, ShareError, type ImportReport } from './share.ts';
 import { createTablet } from './tablet.ts';
 import QRCode from 'qrcode';
 import { encodeWav, wavDurationMs } from './wav.ts';
@@ -107,15 +108,20 @@ const settings = createSettings(app.getPath('userData'), app.getPath('documents'
   forced: forcedLang,
 });
 setLang(settings.uiLang());
-const store = createSessionStore(
-  app.getPath('userData'),
-  (s) => {
+const store = createSessionStore(app.getPath('userData'), {
+  onChange: (s) => {
     editor?.webContents.send('session:changed', s);
     updateTrayMenu();
     tablet?.refresh();
   },
-  () => settings.get().context,
-);
+  onProjects: () => {
+    editor?.webContents.send('projects:changed');
+    updateTrayMenu();
+  },
+  legacyContext: () => settings.get().context, // contexte réglé avant les projets, donné au premier projet
+});
+// Partage des projets : fichier .vibescreener, ou lien de lecture déposé (chiffré) sur le même relais que la tablette.
+const sharing = createSharing({ store, dataDir: app.getPath('userData'), relay: RELAY_URL, fetch: (url, init) => net.fetch(url, init) });
 const tablet = autotest && autotest !== 'tablet'
   ? null
   : createTablet({
@@ -242,6 +248,15 @@ function showEditor(focus?: EditorFocus) {
   if (isMac) app.focus({ steal: true });
   editor.focus();
   syncDock(editor);
+}
+
+/** Éditeur ouvert sur le panneau des projets, sur celui-ci s'il est donné (sinon le projet en cours). */
+function showProjects(projectId?: string) {
+  showEditor();
+  const send = () => editor?.webContents.send('editor:projects', projectId);
+  // Éditeur encore en chargement (lancement de l'app) : le message attend que la page écoute.
+  if (editor!.webContents.isLoading()) editor!.webContents.once('did-finish-load', () => setTimeout(send, 300));
+  else send();
 }
 
 /** Éditeur masqué pour une vidéo : comme fermé, l'icône du Dock s'en va avec lui. */
@@ -716,7 +731,7 @@ async function runExport(format: ExportFormat): Promise<ExportResult> {
   try {
     await store.flush();
     const path = await exportSession({
-      session,
+      session: { ...session, context: store.contextOf(session) },
       sessionDir: store.dir(session),
       outDir: exportDir(),
       format,
@@ -763,13 +778,14 @@ async function menuState(): Promise<MenuState> {
       screens: session.captures.length,
       createdAt: session.createdAt,
     },
+    project: (await store.currentProject()).name,
     tablet: tablet?.isConnected() ?? false,
     pending: pending.length,
     errors: error.length,
     shortcut: shortcutLabel(settings.get().shortcut),
     video: { shortcut: shortcutLabel(VIDEO_SHORTCUT), since: video.isRecording() ? video.startedAt() : undefined },
     tour: tour.isRecording() ? { screens: tour.screens() } : undefined,
-    recents: recents.map(({ id, name, points, screens, updatedAt }) => ({ id, name, points, screens, updatedAt })),
+    recents,
     update: update?.version,
     license: license.view(),
   };
@@ -858,12 +874,11 @@ function onMenuAction(a: MenuAction) {
     case 'editor':
       return openApp();
     case 'sessions':
-      showEditor();
-      return editor?.webContents.send('editor:sessions');
+      return showProjects();
     case 'export':
       return void exportFromMenu('pdf');
     case 'new-session':
-      // Session fermée, éditeur vide : on y choisit une capture ou une vidéo.
+      // Session fermée, éditeur vide : on y choisit une capture ou une vidéo ; la revue naîtra dans le projet en cours.
       return void finishRecording()
         .then(() => store.close())
         .then(() => showEditor());
@@ -1097,8 +1112,6 @@ ipcMain.handle('settings:update', async (_e, patch: Partial<Settings>) => {
   }
   const after = settings.update(patch);
   if (settings.uiLang() !== T.lang) applyLang();
-  // Contexte du projet : il s'applique aussi à la session ouverte (historique compris, ⌘Z ne le défait pas).
-  if (after.context !== before.context) store.update((s) => (s.context = after.context || undefined), { patchHistory: true });
   if (patch.openAtLogin !== undefined && !autotest) app.setLoginItemSettings({ ...LOGIN_ITEM, openAtLogin: patch.openAtLogin });
   if (after.language !== before.language || after.glossary !== before.glossary) void transcriber.restart().then(broadcastSettings);
   broadcastSettings();
@@ -1285,10 +1298,99 @@ ipcMain.on('session:update', (_e, patch: Pick<Session, 'name'>) =>
 ipcMain.on('capture:delete', (_e, id: string) =>
   store.update((s) => (s.captures = s.captures.filter((c) => c.id !== id)), { undoable: true }),
 );
-// Toutes les sessions (éditeur) : ouvrir, ou mettre à la corbeille après confirmation.
-ipcMain.handle('sessions:list', () => store.recent(Infinity));
+// Projets et leurs revues (éditeur) : ouvrir, ranger, mettre à la corbeille après confirmation, partager.
+ipcMain.handle('projects:list', () => store.listProjects());
 ipcMain.handle('session:open', (_e, id: string) => store.open(id));
+ipcMain.handle('session:move', (_e, id: string, projectId: string) => store.moveSession(id, projectId));
+ipcMain.handle('project:create', async (_e, name: string) => (await store.createProject(name)).id);
+ipcMain.handle('project:update', (_e, id: string, patch: { name?: string; context?: string }) => store.updateProject(id, patch));
+// « Nouvelle revue » dans un projet : la revue ouverte est fermée, la prochaine capture naît dans ce projet.
+ipcMain.handle('project:new-review', async (_e, id: string) => {
+  await finishRecording();
+  await store.startIn(id);
+});
+ipcMain.handle('project:trash', async (_e, id: string) => {
+  const project = (await store.listProjects()).find((p) => p.id === id);
+  if (!project) return false;
+  const { response } = await dialog.showMessageBox({
+    type: 'warning',
+    message: T.main.trashProject(project.name, project.sessions.length),
+    detail: T.main.trashProjectDetail,
+    buttons: [T.main.trashConfirm, T.main.cancel],
+    defaultId: 1,
+    cancelId: 1,
+  });
+  if (response !== 0) return false;
+  await sharing.revoke(id).catch(() => {}); // lien arrêté si le relais répond, sinon il expire seul
+  const open = store.get();
+  if (open && store.projectOf(open)?.id === id) await store.close();
+  const failed: string[] = [];
+  for (const s of project.sessions) await shell.trashItem(join(store.sessionsDir, s.id)).catch((err) => failed.push(String(err)));
+  if (failed.length) void dialog.showMessageBox({ type: 'warning', message: T.main.trashFailed(failed[0]!) });
+  await store.removeProject(id);
+  return true;
+});
+
+const shareError = (err: unknown) => ({ ok: false as const, error: err instanceof ShareError ? err.message : T.share.failed(String(err)) });
+
+/** Projet partagé à importer : fichier .vibescreener, ou lien de lecture collé. */
+async function importProject(source: string): Promise<{ ok: true; report: ImportReport } | { ok: false; error: string }> {
+  try {
+    const report = /^https?:\/\//i.test(source.trim()) ? await sharing.importLink(source) : await sharing.importFile(source);
+    return { ok: true, report };
+  } catch (err) {
+    return shareError(err);
+  }
+}
+
+ipcMain.handle('project:import', async (_e, source?: string) => {
+  if (!source) {
+    const r = await dialog.showOpenDialog(editor!, { properties: ['openFile'], filters: [{ name: T.main.projectFilter, extensions: [SHARE_EXT] }] });
+    source = r.filePaths[0];
+    if (r.canceled || !source) return null;
+  }
+  return importProject(source);
+});
+ipcMain.handle('project:save-file', async (_e, id: string) => {
+  const project = (await store.projects()).find((p) => p.id === id);
+  if (!project) return null;
+  const r = await dialog.showSaveDialog(editor!, {
+    defaultPath: join(exportDir(), `${slugify(project.name)}.${SHARE_EXT}`),
+    filters: [{ name: T.main.projectFilter, extensions: [SHARE_EXT] }],
+  });
+  if (r.canceled || !r.filePath) return null;
+  try {
+    await store.flush();
+    await sharing.exportFile(id, r.filePath);
+    shell.showItemInFolder(r.filePath); // prêt à glisser dans un e-mail ou une messagerie
+    return { ok: true as const, path: r.filePath };
+  } catch (err) {
+    return shareError(err);
+  }
+});
+ipcMain.handle('share:link', (_e, id: string) => sharing.link(id));
+// Lien de lecture créé ou mis à jour, puis copié ; l'avancement de l'envoi est montré dans le panneau.
+ipcMain.handle('share:publish', async (e, id: string) => {
+  try {
+    const link = await sharing.publish(id, (done, total) => e.sender.send('share:progress', { projectId: id, done, total }));
+    clipboard.writeText(link.url);
+    return { ok: true as const, link };
+  } catch (err) {
+    return shareError(err);
+  } finally {
+    e.sender.send('share:progress', null);
+  }
+});
+ipcMain.handle('share:revoke', async (_e, id: string) => {
+  try {
+    await sharing.revoke(id);
+    return { ok: true as const };
+  } catch (err) {
+    return shareError(err);
+  }
+});
 ipcMain.handle('session:trash', async (_e, id: string) => {
+  // La liste se rafraîchit d'elle-même (projects:changed).
   const target = (await store.recent(Infinity)).find((r) => r.id === id);
   const dir = join(store.sessionsDir, id);
   if (!target || dirname(dir) !== store.sessionsDir) return false;
@@ -1303,6 +1405,7 @@ ipcMain.handle('session:trash', async (_e, id: string) => {
   if (response !== 0) return false;
   if (store.get()?.id === id) await store.close();
   await shell.trashItem(dir).catch((err) => dialog.showMessageBox({ type: 'warning', message: T.main.trashFailed(String(err)) }));
+  editor?.webContents.send('projects:changed');
   updateTrayMenu();
   return true;
 });
@@ -1417,9 +1520,9 @@ async function runEditorAutotest() {
   const results = { whisper: transcriber.status().state, dictated, pdf: await runExport('pdf'), markdown: await runExport('markdown'), pptx: await runExport('pptx'), mcpImages };
 
   // Liste de toutes les sessions, par-dessus l'éditeur, puis refermée (Échap).
-  editor.webContents.send('editor:sessions');
+  editor.webContents.send('editor:projects');
   await wait(600);
-  await writeFile(join(out, 'sessions.png'), (await editor.webContents.capturePage()).toPNG());
+  await writeFile(join(out, 'projects.png'), (await editor.webContents.capturePage()).toPNG());
   editor.webContents.sendInputEvent({ type: 'keyDown', keyCode: 'Escape' });
   // Menu ≡ de l'en-tête (entrées du menu de l'icône), puis refermé (Échap).
   await wait(300);
@@ -1592,7 +1695,29 @@ let quitting = false;
 // demandé d'abord : c'est lui qui prévient l'app lancée). Si l'ancienne l'a déjà rendu en se fermant,
 // cette copie s'arrête aussi au lieu de démarrer pendant l'installation.
 if ((!autotest && !app.requestSingleInstanceLock()) || process.argv.includes('--quit')) app.quit();
-app.on('second-instance', (_e, argv) => (argv.includes('--quit') ? app.quit() : openApp()));
+
+// Projet partagé ouvert d'un double-clic : macOS l'annonce par open-file (avant le démarrage s'il lance l'app),
+// Windows le passe en argument (au lancement, ou à la copie déjà lancée par second-instance).
+const sharedFile = (argv: string[]) => argv.find((a) => a.toLowerCase().endsWith(`.${SHARE_EXT}`));
+let started = false;
+let openedFile = sharedFile(process.argv);
+async function importFromOs(path: string) {
+  const r = await importProject(path);
+  if (r.ok) showProjects(r.report.projectId);
+  void dialog.showMessageBox({ type: r.ok ? 'info' : 'warning', message: r.ok ? T.projects.imported(r.report) : r.error });
+}
+app.on('open-file', (e, path) => {
+  if (!sharedFile([path])) return;
+  e.preventDefault();
+  if (started) void importFromOs(path);
+  else openedFile = path;
+});
+app.on('second-instance', (_e, argv) => {
+  if (argv.includes('--quit')) return app.quit();
+  const file = sharedFile(argv);
+  if (file) void importFromOs(file);
+  else openApp();
+});
 // Lancement à l'ouverture de session : --login le distingue sous Windows, l'app reste alors dans la zone de notification.
 const LOGIN_ITEM = { args: ['--login'] };
 app.on('window-all-closed', () => {
@@ -1759,5 +1884,7 @@ void app.whenReady().then(async () => {
     if (!welcomeWindow && settings.get().engine === 'local' && transcriber.status().state === 'missing') showSettings('transcription');
   });
   dictation.resume();
+  started = true;
+  if (openedFile) void importFromOs(openedFile);
   void tablet?.start();
 });

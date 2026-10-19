@@ -11,6 +11,7 @@
 > - Tablette (§11) : **iPad + Apple Pencil**. Validation **Mac et Windows** dès les POC.
 > - **Mode vidéo** (2026-10-07, demandé, voir `ROADMAP.md`) : ⌃⌥⌘R enregistre ; on navigue par des clics seuls, et ⌘ + clic (Ctrl + clic) suivi de paroles devient un point ; pas de fichier vidéo, la session reste ordinaire.
 > - **Mode parcours** (2026-10-12, demandé, §4.11) : on se promène dans une fenêtre choisie, chaque écran et chaque état deviennent une capture, une page défilée est assemblée en une seule image.
+> - **Projets et partage** (2026-10-19, demandé, §4.12) : un projet regroupe plusieurs revues et porte leur contexte ; il se partage par un lien de lecture chiffré ou par un fichier `.vibescreener`.
 
 ## 1. Contexte et objectifs
 
@@ -71,8 +72,9 @@ Priorités : **[M]** indispensable en V1, **[S]** souhaité en V1, **[C]** plus 
 - **[M]** Une session = une revue = un PDF. Elle est créée automatiquement à la première capture si aucune n'est ouverte.
 - **[M]** Nom par défaut « Revue AAAA-MM-JJ HHhMM », renommable d'un clic sur le titre.
 - **[M]** Sauvegarde automatique à chaque modification. Une session interrompue (crash, fermeture) se rouvre intacte.
-- **[S]** « Contexte du projet » (projet, stack, page testée), dans les réglages : repris par la session ouverte et les suivantes, et en tête du PDF.
+- **[S]** « Contexte du projet » (projet, stack, page testée) : il appartient au projet de la revue (§4.12) et figure en tête du PDF. Avant les projets, c'était un réglage, devenu le contexte du premier projet.
 - **[S]** Sessions récentes accessibles depuis l'icône, pour rouvrir ou réexporter.
+- Dans l'interface, une session s'appelle une « revue » ; chaque revue appartient à un projet (§4.12).
 
 ### 4.2 Capture d'écran
 
@@ -209,6 +211,25 @@ On se promène vite dans un logiciel ; à l'arrêt, toute son interface est en c
   - un survol qui reste affiché peut donner une capture ; une vidéo qui joue empêche l'écran d'être stable ;
   - une page qui se charge pendant le défilement peut laisser un raccord.
 
+### 4.12 Projets et partage (demandé le 19 oct. 2026)
+
+Un projet regroupe plusieurs revues ; il se partage avec d'autres personnes.
+
+- **Projet** : un nom et un contexte. La revue créée par la prochaine capture (ou un document, une vidéo, un parcours) naît dans le **projet en cours** : celui de la revue ouverte, sinon le dernier choisi.
+- Au premier lancement après leur arrivée, un projet « Mes revues » reçoit toutes les revues existantes et le contexte réglé jusque-là.
+- **Panneau Projets** (nom du projet dans l'en-tête de l'éditeur, « Projets… » dans les menus) :
+  - à gauche : les projets, Nouveau projet, Importer… ;
+  - à droite, pour le projet choisi : nom (renommable), contexte, revues (ouvrir, exporter le PDF, ranger dans un autre projet, corbeille), Nouvelle revue, Partager, corbeille du projet (ses revues comprises, son lien arrêté).
+- **Lien de lecture** :
+  - chaque revue, puis l'index du projet, est chiffrée sur l'ordinateur (AES-GCM) et déposée sur le relais (R2) ; la clé est dans le fragment du lien (`/view#s=<id>&k=<clé>`), jamais envoyée au serveur ;
+  - le destinataire voit le projet et ses écrans annotés dans son navigateur, sans l'app (visionneuse servie par le relais) ;
+  - « Mettre à jour » renvoie tout au même lien ; « Arrêter le partage » l'efface ; un lien vit 30 jours après son dernier envoi ;
+  - une revue de plus de 90 Mo chiffrée ne passe pas par un lien : le fichier projet s'impose ;
+  - le jeton qui permet de mettre à jour ou d'arrêter le lien reste sur l'ordinateur (`shares.json`).
+- **Fichier projet** (`.vibescreener`, un zip) : le projet et ses revues (captures, textes des pages, documents, croquis, inspirations, dictées non transcrites), à envoyer par e-mail ou messagerie. Il s'importe par Importer…, en le déposant sur l'éditeur ou d'un double-clic.
+- **Import** (fichier, ou lien collé dans Importer…) : le projet est ajouté, ou complété s'il existe ; pour chaque revue, la version la plus récente est gardée (« ajoutée », « mise à jour », « déjà à jour », « gardée, plus récente ici »). Une dictée restée en attente chez l'autre arrive en erreur, à réessayer.
+- Pas de compte ni de modification à plusieurs en même temps : on travaille chacun sur sa copie, et l'import fusionne revue par revue.
+
 ## 5. PWA de croquis
 
 La PWA est une toile plein écran pour dessiner au doigt ou au stylet ; un seul bouton envoie le croquis au point sélectionné sur le desktop.
@@ -321,6 +342,8 @@ Tout est stocké en local, en fichiers lisibles, un dossier par session ; seuls 
 ### 8.1 Stockage
 
 ```text
+<dossier données de l'app>/projects.json   projets (id, nom, contexte)
+<dossier données de l'app>/shares.json     liens de partage créés ici (id, clé, jeton)
 <dossier données de l'app>/sessions/<sessionId>/
   session.json                 état complet de la session
   captures/<captureId>.png     captures en pleine résolution
@@ -338,8 +361,12 @@ Tout est stocké en local, en fichiers lisibles, un dossier par session ; seuls 
 ### 8.2 Modèle (TypeScript, dans `packages/shared`)
 
 ```ts
+type Project = { id: string; name: string; context?: string; createdAt: string; updatedAt: string };
+
 type Session = {
-  id: string; name: string; context?: string;
+  id: string; name: string;
+  projectId?: string;            // absent avant les projets : rangée dans le premier
+  context?: string;              // ancien contexte ; celui du projet l'emporte
   createdAt: string; updatedAt: string;
   captures: Capture[];
 };
@@ -471,7 +498,7 @@ La transcription est tranchée : Whisper en local. Les trois autres choix struct
 - Quelle tablette : iPad avec Apple Pencil, Android, ou les deux ? Cela oriente la gestion de la pression et du rejet de paume.
 - Faut-il un usage sans internet (train, réseau d'entreprise qui filtre les WebSockets) ? Si oui, le mode Wi-Fi local passe en V1.
 
-**Hors périmètre V1** : comptes et collaboration, Linux, annotation de vidéo (ajoutée ensuite sous forme de mode vidéo sans fichier vidéo, voir `ROADMAP.md`), retouche d'image (flou, recadrage manuel), envoi direct à une API d'IA, intégration Jira ou GitHub.
+**Hors périmètre V1** : comptes et collaboration en temps réel (le partage de projets, §4.12, se fait par lien de lecture ou par fichier), Linux, annotation de vidéo (ajoutée ensuite sous forme de mode vidéo sans fichier vidéo, voir `ROADMAP.md`), retouche d'image (flou, recadrage manuel), envoi direct à une API d'IA, intégration Jira ou GitHub.
 
 **Évolution à fort potentiel [C]** : un serveur MCP local exposant la session ouverte. Claude Code lirait alors les retours et les images sans passer par un PDF, et pourrait cocher lui-même les points traités.
 

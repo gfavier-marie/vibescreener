@@ -4,10 +4,11 @@
 import { useEffect, useRef, useState } from 'react';
 import { createRoot } from 'react-dom/client';
 import { allAnnotations, type Annotation, type DocumentPage, type Note, type Session } from '@pastille/shared';
-import { imageUrl, type ExportFormat, type MenuAction, type MenuState, type SessionSummary, type SettingsState } from '../../ipc.ts';
+import { imageUrl, type ExportFormat, type MenuAction, type MenuState, type ProjectSummary, type SettingsState } from '../../ipc.ts';
 import * as I from '../icons.tsx';
 import { MenuItems } from '../menu/items.tsx';
 import { MODES, ModeTile, type ModeId } from '../modes.tsx';
+import { importNotice, ProjectsPanel, type Notice } from './Projects.tsx';
 import { T } from '../texts.ts';
 import { createRecorder, type RecorderState } from './recorder.ts';
 import { Stage } from './Stage.tsx';
@@ -27,6 +28,8 @@ const docLabel = (d: DocumentPage) => T.editor.docLabel(d.format, d.page, d.shee
 const isTyping = (t: EventTarget | null) => t instanceof HTMLTextAreaElement || t instanceof HTMLInputElement;
 /** Document déposé (PDF ou Office) : ouvert comme une session ; le processus principal refuse ce qu'il ne lit pas. */
 const isDocumentFile = (f: File) => /\.(pdf|doc[xm]?|dotx?|xl[st][xm]?|pp[st][xm]?|potx?)$/i.test(f.name);
+/** Projet partagé déposé : importé. */
+const isProjectFile = (f: File) => /\.vibescreener$/i.test(f.name);
 
 /** Image collée ou déposée (PNG, JPEG, WebP…) convertie en PNG ; null si illisible. */
 async function toPng(file: File): Promise<Uint8Array | null> {
@@ -88,58 +91,6 @@ function EditableText(props: {
   );
 }
 
-/** Toutes les sessions, la plus récente d'abord : ouvrir, réexporter le PDF, mettre à la corbeille. */
-function SessionsPanel(props: { currentId?: string; onOpen: (id: string) => void; onExport: (id: string) => void; onClose: () => void }) {
-  const [list, setList] = useState<SessionSummary[] | null>(null);
-  const load = () => void api.listSessions().then(setList);
-  useEffect(load, []);
-  return (
-    <div className="sessions-backdrop" onMouseDown={(e) => e.target === e.currentTarget && props.onClose()}>
-      <section className="sessions" role="dialog" aria-label={T.editor.allSessions}>
-        <div className="sessions-head">
-          <h2>{T.editor.allSessions}</h2>
-          <button type="button" className="nav-btn" aria-label={T.editor.close} onClick={props.onClose}>
-            <I.Close size={11} />
-          </button>
-        </div>
-        {list?.length === 0 && <p className="none">{T.editor.noSessions}</p>}
-        <ul>
-          {list?.map((r) => (
-            <li key={r.id} className={r.id === props.currentId ? 'current' : ''}>
-              <button type="button" className="open" aria-label={T.editor.openSession(r.name)} onClick={() => props.onOpen(r.id)}>
-                <span className="title">{r.name}</span>
-                <span className="meta">
-                  {T.points(r.points)} · {T.screens(r.screens)} · {T.day(r.updatedAt)}
-                </span>
-              </button>
-              {r.id === props.currentId && <span className="tag">{T.editor.sessionOpen}</span>}
-              <button
-                type="button"
-                className="tool"
-                aria-label={T.editor.exportSession(r.name)}
-                title={T.editor.exportSession(r.name)}
-                disabled={r.screens === 0}
-                onClick={() => props.onExport(r.id)}
-              >
-                <I.Export size={14} />
-              </button>
-              <button
-                type="button"
-                className="tool"
-                aria-label={T.editor.trashSession(r.name)}
-                title={T.editor.trashSession(r.name)}
-                onClick={() => void api.trashSession(r.id).then((done) => done && load())}
-              >
-                <I.Trash size={14} />
-              </button>
-            </li>
-          ))}
-        </ul>
-      </section>
-    </div>
-  );
-}
-
 function App() {
   const [session, setSession] = useState<Session | null>(null);
   const [captureId, setCaptureId] = useState<string | null>(null);
@@ -148,7 +99,11 @@ function App() {
   const [renaming, setRenaming] = useState(false);
   const [exportMenu, setExportMenu] = useState(false);
   const [appMenu, setAppMenu] = useState<MenuState | null>(null); // menu ≡ ouvert : entrées du menu de l'icône
-  const [sessionsOpen, setSessionsOpen] = useState(false); // liste de toutes les sessions
+  // Panneau des projets ouvert : sur ce projet (sinon le projet en cours), avec un message (import)
+  const [projectsOpen, setProjectsOpen] = useState<{ projectId?: string; notice?: Notice | null; key: number } | null>(null);
+  const openProjects = (projectId?: string, notice?: Notice | null) => setProjectsOpen({ projectId, notice, key: Date.now() });
+  const [projects, setProjects] = useState<ProjectSummary[]>([]);
+  const sessionsOpen = !!projectsOpen;
   const [toast, setToast] = useState<{ text: string; error?: boolean } | null>(null);
   const [rec, setRec] = useState<RecorderState>(null);
   const levels = useRef<number[]>([]);
@@ -214,7 +169,10 @@ function App() {
     void api.getSettings().then(applyPrefs);
     const offSettings = api.onSettingsChanged(applyPrefs);
     const offTablet = api.onTabletStatus(setTablet);
-    const offSessions = api.onShowSessions(() => setSessionsOpen(true));
+    const offSessions = api.onShowProjects((projectId) => openProjects(projectId));
+    const loadProjects = () => void api.listProjects().then(setProjects);
+    loadProjects();
+    const offProjects = api.onProjects(loadProjects);
     const offOpening = api.onDocumentProgress(setOpening);
     // Micro préparé au raccourci : la capture masque l'éditeur, mais le micro reste ouvert pour la dictée qui suit.
     let preparing = false;
@@ -235,6 +193,7 @@ function App() {
       offTablet();
       offSettings();
       offSessions();
+      offProjects();
       offOpening();
       document.removeEventListener('visibilitychange', onVisibility);
     };
@@ -300,10 +259,10 @@ function App() {
     setTimeout(() => setToast(null), 5000);
   }
 
-  /** Une session de la liste s'ouvre dans l'éditeur ; « Exporter » l'ouvre puis exporte son PDF. */
+  /** Une revue de la liste s'ouvre dans l'éditeur ; « Exporter » l'ouvre puis exporte son PDF. */
   async function openSession(id: string, exportPdf = false) {
     recorder.stop(true);
-    setSessionsOpen(false);
+    setProjectsOpen(null);
     if (id !== session?.id) {
       await api.openSession(id);
       setCaptureId(null);
@@ -318,7 +277,7 @@ function App() {
     setAppMenu(null);
     recorder.stop(true);
     if (a.type === 'export') void runExport('pdf');
-    else if (a.type === 'sessions') setSessionsOpen(true);
+    else if (a.type === 'sessions') openProjects();
     else if (a.type === 'open-recent' || a.type === 'export-recent') void openSession(a.id, a.type === 'export-recent');
     else api.menuAction(a);
   }
@@ -348,12 +307,21 @@ function App() {
     </div>
   );
 
-  const sessionsPanel = sessionsOpen && (
-    <SessionsPanel
-      currentId={session?.id}
+  // Projet de la revue ouverte, sinon celui où naîtra la prochaine revue.
+  const project = projects.find((p) => p.id === session?.projectId) ?? projects.find((p) => p.current);
+  // Revue ouverte, ou rangée ailleurs : le nom du projet dans l'en-tête suit.
+  useEffect(() => void api.listProjects().then(setProjects), [session?.id, session?.projectId]);
+
+  const sessionsPanel = projectsOpen && projects.length > 0 && (
+    <ProjectsPanel
+      key={projectsOpen.key}
+      projects={projects}
+      initialId={projectsOpen.projectId}
+      initialNotice={projectsOpen.notice}
+      sessionId={session?.id}
       onOpen={(id) => void openSession(id)}
       onExport={(id) => void openSession(id, true)}
-      onClose={() => setSessionsOpen(false)}
+      onClose={() => setProjectsOpen(null)}
     />
   );
 
@@ -386,7 +354,7 @@ function App() {
       if (sessionsOpen || appMenu) {
         // Liste des sessions ou menu ≡ ouvert : seul Échap agit (le fermer).
         if (e.key === 'Escape') {
-          setSessionsOpen(false);
+          setProjectsOpen(null);
           setAppMenu(null);
         }
         return;
@@ -472,8 +440,11 @@ function App() {
     const onDragOver = (e: DragEvent) => e.preventDefault();
     const onDrop = (e: DragEvent) => {
       e.preventDefault();
-      const doc = [...(e.dataTransfer?.files ?? [])].find(isDocumentFile);
-      if (doc) api.openDocument(doc);
+      const files = [...(e.dataTransfer?.files ?? [])];
+      const shared = files.find(isProjectFile);
+      const doc = files.find(isDocumentFile);
+      if (shared) void api.importProject(shared).then((r) => openProjects(r?.ok ? r.report.projectId : undefined, importNotice(r)));
+      else if (doc) api.openDocument(doc);
       else attach(e.dataTransfer?.files);
     };
     window.addEventListener('paste', onPaste);
@@ -525,9 +496,10 @@ function App() {
             </button>
           ))}
         </div>
-        <button type="button" className="btn" onClick={() => setSessionsOpen(true)}>
+        <button type="button" className="btn" onClick={() => openProjects()}>
           <I.Folder size={14} />
-          {T.editor.allSessions}
+          {T.projects.title}
+          {project && <span className="faint">{project.name}</span>}
         </button>
         {appMenuButton}
         {sessionsPanel}
@@ -670,8 +642,8 @@ function App() {
   return (
     <div className={`editor ${isMac ? 'mac' : ''}`}>
       <header>
-        <button type="button" className="crumb" onClick={() => setSessionsOpen(true)}>
-          {T.editor.sessions}
+        <button type="button" className="crumb" title={T.projects.title} onClick={() => openProjects()}>
+          {project?.name ?? T.projects.title}
         </button>
         <span className="crumb-sep" aria-hidden="true">
           /

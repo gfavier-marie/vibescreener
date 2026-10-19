@@ -1,9 +1,9 @@
 import { existsSync } from 'node:fs';
-import { mkdtemp, readFile } from 'node:fs/promises';
+import { mkdir, mkdtemp, readFile, writeFile } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { describe, expect, it } from 'vitest';
-import { findAnnotation, type Session } from '@pastille/shared';
+import { findAnnotation, newSession, type Session } from '@pastille/shared';
 import { createSessionStore } from './session-store.ts';
 
 const meta = { width: 200, height: 100, scaleFactor: 2 };
@@ -51,18 +51,18 @@ describe('stockage des sessions', () => {
     expect(existsSync(file + '.tmp')).toBe(false);
   });
 
-  it('une nouvelle session prend le contexte du projet réglé à ce moment', async () => {
+  it('une session prend le contexte de son projet, même modifié après coup', async () => {
     const root = await mkdtemp(join(tmpdir(), 'pastille-'));
-    let context = 'Site vitrine';
-    const store = createSessionStore(root, undefined, () => context);
+    const store = createSessionStore(root, { legacyContext: () => 'Site vitrine' });
     const first = await store.ensure();
-    expect(first.context).toBe('Site vitrine');
+    expect(store.contextOf(first)).toBe('Site vitrine');
+    await store.updateProject(first.projectId!, { context: 'Back-office' });
+    expect(store.contextOf(first)).toBe('Back-office');
     await store.close();
     expect(store.get()).toBeNull();
-    context = 'Back-office';
     const next = await store.ensure();
     expect(next.id).not.toBe(first.id);
-    expect(next.context).toBe('Back-office');
+    expect(next.projectId).toBe(first.projectId);
   });
 });
 
@@ -155,3 +155,55 @@ describe('sessions récentes', () => {
     expect(store.get()!.name).toBe('Ancienne');
   });
 });
+
+describe('projets', () => {
+  it('range les sessions existantes dans un premier projet, avec le contexte réglé jusque-là', async () => {
+    const root = await mkdtemp(join(tmpdir(), 'pastille-'));
+    const old = newSession(new Date(2026, 9, 1));
+    await mkdir(join(root, 'sessions', old.id), { recursive: true });
+    await writeFile(join(root, 'sessions', old.id, 'session.json'), JSON.stringify(old));
+    const store = createSessionStore(root, { legacyContext: () => 'Back-office React' });
+    await store.restore();
+    const [first] = await store.projects();
+    expect(first).toMatchObject({ name: 'Mes revues', context: 'Back-office React' });
+    expect((await store.readSession(old.id)).projectId).toBe(first!.id);
+    // Au lancement suivant, rien n'est refait.
+    const again = createSessionStore(root, { legacyContext: () => 'autre' });
+    await again.restore();
+    expect(await again.projects()).toEqual([first]);
+  });
+
+  it('crée la revue dans le projet choisi, la range ailleurs et regroupe les revues par projet', async () => {
+    const root = await mkdtemp(join(tmpdir(), 'pastille-'));
+    const store = createSessionStore(root);
+    const a = await store.ensure();
+    const client = await store.createProject('Site client');
+    await store.startIn(client.id);
+    const b = await store.ensure();
+    expect(b.projectId).toBe(client.id);
+    expect(a.projectId).not.toBe(client.id);
+    await store.flush();
+    let list = await store.listProjects();
+    expect(list.find((p) => p.id === client.id)).toMatchObject({ current: true, sessions: [{ id: b.id }] });
+
+    await store.moveSession(a.id, client.id);
+    list = await store.listProjects();
+    expect(list.find((p) => p.id === client.id)!.sessions.map((s) => s.id).sort()).toEqual([a.id, b.id].sort());
+    expect(list.find((p) => p.id !== client.id)!.sessions).toEqual([]);
+
+    // Revue ouverte d'un autre projet : il devient le projet en cours.
+    await store.open(a.id);
+    expect((await store.currentProject()).id).toBe(client.id);
+  });
+
+  it("un projet retiré n'est plus le projet en cours ; sans projet, un nouveau est créé", async () => {
+    const root = await mkdtemp(join(tmpdir(), 'pastille-'));
+    const store = createSessionStore(root);
+    const first = await store.currentProject();
+    await store.removeProject(first.id);
+    const next = await store.currentProject();
+    expect(next.id).not.toBe(first.id);
+    expect(next.name).toBe('Mes revues');
+  });
+});
+

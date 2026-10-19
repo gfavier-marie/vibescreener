@@ -50,7 +50,7 @@ function App() {
         <div className="titles">
           <div className="name">{session ? session.name : T.menu.noSession}</div>
           <div className="meta">
-            {session ? `${T.points(session.points)} · ${T.screens(session.screens)} · ${T.since(session.createdAt)}` : T.menu.noSessionHint}
+            {s.project} · {session ? `${T.points(session.points)} · ${T.screens(session.screens)} · ${T.since(session.createdAt)}` : T.menu.noSessionHint}
           </div>
         </div>
       </div>

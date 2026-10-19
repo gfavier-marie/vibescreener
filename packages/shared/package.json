@@ -5,7 +5,8 @@
   "type": "module",
   "exports": {
     ".": "./src/index.ts",
-    "./protocol": "./src/protocol.ts"
+    "./protocol": "./src/protocol.ts",
+    "./share": "./src/share.ts"
   },
   "scripts": {
     "typecheck": "tsc -p ."

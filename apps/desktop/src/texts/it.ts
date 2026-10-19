@@ -99,16 +99,16 @@ export const it: Texts = {
 
   menu: {
     label: 'VibeScreener',
-    noSession: 'Nessuna sessione aperta',
+    noSession: 'Nessuna revisione aperta',
     noSessionHint: 'La prossima cattura ne apre una.',
     tablet: 'Tablet connesso',
     stopVideo: 'Interrompi la registrazione',
     stopTour: (screens: number) => `Interrompi il percorso (${plural(screens, 'schermata', 'schermate')})`,
     editor: "Apri l'editor",
     exportPdf: 'Esporta il PDF',
-    newSession: 'Nuova sessione',
-    recents: 'Sessioni recenti',
-    allSessions: 'Tutte le sessioni…',
+    newSession: 'Nuova revisione',
+    recents: 'Revisioni recenti',
+    projects: 'Progetti…',
     reexport: (name: string) => `Riesporta il PDF di ${name}`,
     pair: 'Associa un tablet…',
     claudeCode: 'Collega Claude Code…',
@@ -123,7 +123,7 @@ export const it: Texts = {
   },
 
   bar: {
-    label: 'Sessione VibeScreener',
+    label: 'Revisione VibeScreener',
     capture: 'Cattura',
     newCapture: 'Nuova cattura',
     editor: "Apri l'editor",
@@ -200,7 +200,7 @@ export const it: Texts = {
     uiLanguage: "Lingua dell'interfaccia",
     uiLanguageAuto: 'Automatica (lingua del sistema)',
     openAtLogin: `Apri VibeScreener all'avvio ${isMac ? 'del Mac' : 'del computer'}`,
-    floatingBar: 'Barra fluttuante durante una sessione',
+    floatingBar: 'Barra fluttuante durante una revisione',
     floatingBarHint: 'Contatore dei punti, cattura ed esportazione, sempre a portata di mano.',
     engine: 'Motore',
     engines: { local: 'Whisper locale', api: 'API con chiave' },
@@ -219,15 +219,12 @@ export const it: Texts = {
     save: 'Salva',
     glossary: 'Glossario',
     glossaryHint: 'Termini da riconoscere bene (nomi dei componenti, gergo del progetto).',
-    context: 'Contesto del progetto',
-    contextHint: 'In cima alle esportazioni e alla revisione letta da Claude Code. Vale per la sessione aperta e per le successive.',
-    contextPlaceholder: 'Progetto, stack, pagina testata',
     instructions: "Istruzioni per l'IA",
     instructionsHint: 'In cima al PDF, al Markdown e alla revisione letta da Claude Code. {N} viene sostituito dal numero di feedback.',
     claudeCode: 'Claude Code',
     claudeCodeCommand: 'Per collegarlo, esegui una volta questo comando in un terminale:',
     claudeCodeHint:
-      'Claude Code potrà così leggere le tue revisioni (sessioni, feedback, catture annotate) finché VibeScreener è in esecuzione. Chiedigli per esempio “applica la revisione VibeScreener”.',
+      'Claude Code potrà così leggere i tuoi progetti e le loro revisioni (feedback, catture annotate) finché VibeScreener è in esecuzione. Chiedigli per esempio “applica la revisione VibeScreener”.',
     claudeCodeOff: 'Server per Claude Code non avviato.',
     claudeCodeSeen: (iso: string) =>
       `Connesso ${seenOn(iso)} alle ${clock('it', iso)}`,
@@ -266,7 +263,7 @@ export const it: Texts = {
     activating: 'Attivazione…',
     activated: `Licenza attivata su ${isMac ? 'questo Mac' : 'questo computer'}.`,
     licenseHint:
-      'Senza licenza, finita la prova, le nuove catture sono bloccate. Le tue sessioni, le esportazioni e Claude Code restano accessibili.',
+      'Senza licenza, finita la prova, le nuove catture sono bloccate. Le tue revisioni, le esportazioni e Claude Code restano accessibili.',
   },
 
   welcome: {
@@ -338,14 +335,7 @@ export const it: Texts = {
   },
 
   editor: {
-    rename: 'Rinomina la sessione',
-    sessions: 'Sessioni',
-    allSessions: 'Tutte le sessioni',
-    noSessions: 'Nessuna sessione salvata.',
-    sessionOpen: 'aperta',
-    openSession: (name: string) => `Apri ${name}`,
-    exportSession: (name: string) => `Esporta il PDF di ${name}`,
-    trashSession: (name: string) => `Sposta ${name} nel cestino`,
+    rename: 'Rinomina la revisione',
     close: 'Chiudi',
     tablet: 'Tablet connesso',
     export: 'Esporta',
@@ -421,12 +411,62 @@ export const it: Texts = {
       `${label} · ${first === undefined ? 'nessun punto' : first === last ? `#${first}` : `#${first}–${last}`}`,
     pageThumbLabel: (label: string, points: number, current: boolean) =>
       `${label}, ${plural(points, 'punto', 'punti')}${current ? ', visualizzata' : ''}`,
-    captures: 'Catture della sessione',
+    captures: 'Catture della revisione',
     deleteScreen: (index: number) => `Elimina la schermata ${index} e i suoi punti`,
     screenDeleted: (index: number, mod: string) => `Schermata ${index} eliminata · ${mod}Z per annullare`,
     opening: (name: string, done: number, total: number) => `${name}: pagina ${done} / ${total}`,
     micError: (err: unknown) => `Microfono non disponibile: ${err}`,
     zoomedImage: 'Immagine ingrandita',
+  },
+
+  projects: {
+    title: 'Progetti',
+    defaultName: 'Le mie revisioni',
+    untitled: 'Progetto senza titolo',
+    current: 'in corso',
+    reviews: (n: number) => plural(n, 'revisione', 'revisioni'),
+    newProject: 'Nuovo progetto',
+    namePlaceholder: 'Nome del progetto',
+    rename: 'Rinomina il progetto',
+    trashProject: 'Sposta il progetto nel cestino',
+    context: 'Contesto del progetto',
+    contextHint: 'In cima alle esportazioni e alla revisione letta da Claude Code, per ogni revisione del progetto.',
+    contextPlaceholder: 'Progetto, stack, pagina testata',
+    noReviews: 'Ancora nessuna revisione in questo progetto: la prossima cattura ne apre una, oppure “Nuova revisione”.',
+    newReview: 'Nuova revisione',
+    open: 'aperta',
+    openReview: (name: string) => `Apri ${name}`,
+    exportReview: (name: string) => `Esporta il PDF di ${name}`,
+    moveReview: (name: string) => `Sposta ${name} in un altro progetto`,
+    moveTo: 'Sposta in…',
+    trashReview: (name: string) => `Sposta ${name} nel cestino`,
+    share: 'Condividi',
+    linkTitle: 'Link di lettura',
+    linkHint: 'Chi lo riceve vede le schermate annotate nel browser, senza VibeScreener. Crittografato end-to-end: la chiave non esce dal link.',
+    createLink: 'Crea il link',
+    updateLink: 'Aggiorna',
+    copyLink: 'Copia',
+    copied: 'Link copiato negli appunti.',
+    stopLink: 'Interrompi la condivisione',
+    sending: (done: number, total: number) => `Invio crittografato… ${done}/${total}`,
+    linkState: (sharedAt: string, expiresAt: string) => `Aggiornato: ${day(sharedAt)} · scade il ${shortDate('it', expiresAt)}`,
+    fileTitle: 'File di progetto',
+    fileHint: 'Da inviare per e-mail o chat: chi lo riceve lo apre in VibeScreener, aggiunge le sue revisioni e può rimandartelo.',
+    saveFile: 'Salva il file…',
+    import: 'Importa…',
+    importHint: 'Apri o trascina un file .vibescreener, oppure incolla un link di condivisione. Un progetto già presente viene completato: di ogni revisione si tiene la versione più recente.',
+    chooseFile: 'Scegli un file…',
+    linkPlaceholder: 'Link di condivisione',
+    importLink: 'Importa',
+    imported: (r: { name: string; added: number; updated: number; unchanged: number; kept: number }) => {
+      const parts = [
+        r.added && plural(r.added, 'revisione aggiunta', 'revisioni aggiunte'),
+        r.updated && plural(r.updated, 'revisione aggiornata', 'revisioni aggiornate'),
+        r.unchanged && plural(r.unchanged, 'revisione già aggiornata', 'revisioni già aggiornate'),
+        r.kept && plural(r.kept, 'revisione tenuta (più recente qui)', 'revisioni tenute (più recenti qui)'),
+      ].filter(Boolean);
+      return `“${r.name}” importato: ${parts.join(', ') || 'nessuna revisione'}.`;
+    },
   },
 
   main: {
@@ -442,7 +482,7 @@ export const it: Texts = {
     exportCancelled: 'Esportazione annullata.',
     note: (n: number) => `nota ${n}`,
     update: (version: string) => `È disponibile la versione ${version} di VibeScreener.`,
-    updateDetail: (terminal: string) => `Per installarla, incolla questo comando in ${terminal}: chiude VibeScreener, la aggiorna e la riapre. Sessioni e impostazioni vengono conservate.`,
+    updateDetail: (terminal: string) => `Per installarla, incolla questo comando in ${terminal}: chiude VibeScreener, la aggiorna e la riapre. Progetti, revisioni e impostazioni vengono conservati.`,
     updateDetailMac: "Poiché l'app non è firmata da Apple, macOS chiederà di nuovo l'autorizzazione per la registrazione dello schermo, il microfono e l'accessibilità (modalità video).",
     copyCommand: 'Copia il comando',
     updateDone: (version: string) => `VibeScreener è aggiornata: versione ${version}.`,
@@ -454,10 +494,13 @@ export const it: Texts = {
     shortcutTaken: (label: string) => `${label} è già in uso da un'altra applicazione.`,
     shortcutTakenAtStart: (label: string) => `La scorciatoia ${label} è già in uso da un'altra applicazione.`,
     shortcutTakenDetail: "Scegline un'altra nelle impostazioni. Puoi comunque catturare dall'icona di VibeScreener.",
-    trash: (name: string) => `Spostare la sessione “${name}” nel cestino?`,
+    trash: (name: string) => `Spostare la revisione “${name}” nel cestino?`,
     trashDetail: 'Le sue catture e i suoi commenti la seguono. Potrai recuperarla dal cestino.',
     trashConfirm: 'Sposta nel cestino',
     trashFailed: (err: string) => `Impossibile spostare nel cestino: ${err}`,
+    trashProject: (name: string, reviews: number) => `Spostare il progetto “${name}” (${plural(reviews, 'revisione', 'revisioni')}) nel cestino?`,
+    trashProjectDetail: 'Le sue revisioni lo seguono, con catture e commenti, e il suo link di condivisione viene disattivato. Potrai recuperarle dal cestino.',
+    projectFilter: 'Progetto VibeScreener',
     mcpPortTaken: (port: number) => `La porta ${port} è già occupata (un'altra copia di VibeScreener?): Claude Code non può connettersi.`,
     mcpUnavailable: (err: string) => `Server per Claude Code non disponibile: ${err}`,
     captureDenied:
@@ -541,6 +584,21 @@ export const it: Texts = {
     },
   },
 
+  share: {
+    invalid: 'Questo file non è un progetto VibeScreener leggibile.',
+    newer: 'Questo progetto viene da una versione più recente di VibeScreener: aggiorna l’app per aprirlo.',
+    notALink: 'Questo non è un link di condivisione VibeScreener.',
+    badKey: 'Questo link è incompleto o danneggiato: la sua chiave non corrisponde.',
+    expired: (days: number) => `Questo link non si apre più: la condivisione è stata interrotta, oppure è scaduto (${days} giorni dopo l’ultimo invio).`,
+    offline: (err: string) => `Relay irraggiungibile (${err}). Controlla la connessione e riprova.`,
+    refused: (status: number) => `Il relay ha rifiutato la richiesta (errore ${status}).`,
+    tooBig: (name: string, size: number, max: number) =>
+      `“${name}” pesa ${size} MB una volta crittografata, oltre i ${max} MB di un link. Condividi piuttosto il file di progetto.`,
+    noProject: 'Progetto non trovato.',
+    busy: 'Questo progetto è già in invio.',
+    failed: (err: string) => `Condivisione impossibile: ${err}`,
+  },
+
   exports: {
     colon: ': ',
     date: (iso: string) => longDate('it-IT', iso),
@@ -582,7 +640,7 @@ export const it: Texts = {
     instructions: `VibeScreener registra revisioni di interfaccia: screenshot in cui ogni feedback è un punto numerato (da #1 a #N) con un commento, spesso dettato, e a volte uno schizzo o un'ispirazione (screenshot di un altro sito che mostra il risultato desiderato, non la schermata da modificare).
 Per applicare una revisione al codice: se l'utente non specifica altro, prendere la sessione aperta in VibeScreener (scelta predefinita), altrimenti sceglierla con lister_sessions. lire_revue fornisce tutti i feedback; voir_ecran mostra, schermata per schermata, lo screenshot annotato, uno zoom attorno a ogni punto, gli schizzi e le ispirazioni. Guardare ogni schermata prima di modificare il codice. Se un feedback è ambiguo, fare una domanda invece di tirare a indovinare.`,
     sessionParam: 'Id della sessione (vedi lister_sessions). Predefinita: la sessione aperta in VibeScreener, altrimenti la più recente.',
-    listTool: 'Elenca le sessioni di revisione recenti (nome, data, numero di punti, id), dalla più recente.',
+    listTool: 'Elenca le sessioni di revisione recenti (nome, progetto, data, numero di punti, id), dalla più recente.',
     reviewTool:
       "Tutti i feedback di una sessione, in testo: contesto, istruzioni, poi ogni punto (numero, schermata, commento, posizione, schizzi, ispirazioni). Le immagini si ottengono con voir_ecran.",
     screenTool:
@@ -593,8 +651,9 @@ Per applicare una revisione al codice: se l'utente non specifica altro, prendere
     notFoundList: (id: string) => `Sessione “${id}” non trovata: vedi lister_sessions.`,
     noSessions: 'Ancora nessuna sessione.',
     sessions: 'Sessioni, dalla più recente:',
-    sessionLine: (name: string, date: string, points: number, id: string, open: boolean) =>
-      `- ${name} · ultima modifica: ${date} · ${plural(points, 'punto', 'punti')} · id: ${id}${open ? ' (aperta in VibeScreener)' : ''}`,
+    sessionLine: (name: string, project: string, date: string, points: number, id: string, open: boolean) =>
+      `- ${name} · progetto ${project} · ultima modifica: ${date} · ${plural(points, 'punto', 'punti')} · id: ${id}${open ? ' (aperta in VibeScreener)' : ''}`,
+    project: (name: string) => `Progetto: ${name}`,
     untranscribed: (list: string) => `Attenzione: dettatura non ancora trascritta per ${list}; il commento potrebbe essere incompleto.`,
     noPoints: '(nessun punto)',
     sketches: (n: number) => plural(n, 'schizzo', 'schizzi'),

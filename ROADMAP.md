@@ -548,3 +548,21 @@ Lignes `TOUR {json}` : par image figée (défilement trouvé, durée de `findScr
 - [x] Assistant et réglages : la ligne Accessibilité a le même bouton « Autoriser » que les autres (sa ligne dit déjà « Facultative ») et une icône de pointeur, au lieu du bouton d'enregistrement rouge du mode vidéo ; version **0.15.2** (13 oct.)
 - [x] Copie commentée PDF : chaque note a sa fenêtre de note (annotation Popup, fermée, à côté de la pastille), comme Acrobat ; sans elle, on voyait les pastilles sans pouvoir lire les commentaires. Pas encore vérifié dans Aperçu ; version **0.15.3** (13 oct.)
 - [x] Mode vidéo : après ⌘ + clic, le champ du point a le clavier (on tape ou on parle) ; défiler la page termine le point comme un clic seul, en gardant le texte en cours (le point est dessiné sur l'écran, pas sur la page). Pas encore essayé dans l'app ; version **0.15.4** (15 oct.)
+
+## Projets et partage (demandé le 19 oct. 2026)
+
+Un projet regroupe plusieurs revues et porte leur contexte ; il se partage par un **lien de lecture** (navigateur, sans l'app) ou par un **fichier `.vibescreener`** (pour travailler à plusieurs dans l'app). Spécification : SPEC §4.12.
+
+Choix du 19 oct. : **les deux** façons de partager, le fichier d'abord (il sert aussi au lien). Pas de compte ni de projet synchronisé en temps réel (serveur, conflits) : chacun travaille sur sa copie, l'import fusionne revue par revue (la plus récente gagne).
+
+- [x] Modèle : `Project` (nom, contexte) dans `projects.json`, `projectId` sur chaque session ; dossiers des sessions inchangés (images, MCP, corbeille). Premier lancement : « Mes revues » reçoit les sessions existantes et le contexte des réglages
+- [x] Contexte du projet : retiré des réglages, porté par le projet, repris par les exports et Claude Code pour chaque revue du projet
+- [x] Panneau Projets (remplace « Toutes les sessions ») : projets à gauche (nouveau, importer), projet choisi à droite (nom, contexte, revues : ouvrir, exporter, ranger ailleurs, corbeille ; nouvelle revue ; partager ; corbeille du projet). Nom du projet dans l'en-tête de l'éditeur, « Projets… » toujours dans les menus, projet en cours dans le menu de l'icône
+- [x] « Session » devient « revue » dans l'interface (cinq langues) ; noms d'outils MCP inchangés, `lister_sessions` et `lire_revue` donnent le projet
+- [x] Fichier `.vibescreener` (`share.ts`, jszip déjà présent) : enregistrer, importer (bouton, dépôt sur l'éditeur, double-clic : association de fichier), fusion par revue, dictées en attente arrivées en erreur à réessayer
+- [x] Lien : chaque revue puis l'index, chiffrés (AES-GCM) et déposés sur le relais (`/share/<id>/<nom>`, R2) ; jeton du premier envoi exigé pour mettre à jour ou arrêter ; 30 jours après le dernier envoi ; 90 Mo par revue chiffrée ; lien collé dans Importer… pour l'ajouter à ses projets
+- [x] Visionneuse `view.html` servie par le relais (cinq langues) : projet, revues, écrans annotés (`drawAnnotations`), croquis, inspirations, remarques ; vérifiée avec le relais local (wrangler) au bureau et à 375 px, erreurs comprises (clé fausse, lien arrêté)
+- [x] Tests : projets (migration, projet en cours, rangement), fichier (aller, complément, revue gardée ou remplacée), lien (chiffré, mis à jour au même lien, arrêté), relais (droits du jeton, expiration)
+- [x] Page Confidentialité du site (cinq langues) : le partage par lien
+- [x] Déploiement (19 oct.) : bucket R2 `vibescreener-shares` et sa règle d'expiration (commandes dans `apps/relay/wrangler.jsonc`), relais, site, version **0.16.0**
+- [ ] Essai réel dans l'app (avec ton accord) : panneau Projets, partage par lien et par fichier entre deux ordinateurs (ou deux comptes), double-clic sur un `.vibescreener` (Mac, puis Windows)

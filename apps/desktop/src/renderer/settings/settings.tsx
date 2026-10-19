@@ -1,5 +1,5 @@
 // Réglages (§4.8), en onglets : général (capture, commentaire, export, démarrage),
-// autorisations du système, transcription (moteur, modèle, glossaire), contexte du projet et instructions du PDF, tablette.
+// autorisations du système, transcription (moteur, modèle, glossaire), instructions du PDF, tablette.
 
 import { useEffect, useState, type ReactNode } from 'react';
 import { createRoot } from 'react-dom/client';
@@ -304,21 +304,6 @@ function App() {
 
   const exportPdf = (
     <>
-      <Section title={S.context}>
-        <div className="row stack">
-          <label className="hint" htmlFor="context" style={{ margin: 0 }}>
-            {S.contextHint}
-          </label>
-          <textarea
-            id="context"
-            rows={2}
-            key={s.context}
-            defaultValue={s.context}
-            placeholder={S.contextPlaceholder}
-            onBlur={(e) => void update({ context: e.target.value.trim() })}
-          />
-        </div>
-      </Section>
       <Section title={S.instructions}>
         <div className="row stack">
           <label className="hint" htmlFor="instructions" style={{ margin: 0 }}>

@@ -24,6 +24,11 @@ asarUnpack:
   - '**/*.node'
   - '**/node_modules/get-windows/main'
 npmRebuild: false
+# Projet partagé : un double-clic sur un fichier .vibescreener l'importe (open-file sur macOS, argument sous Windows).
+fileAssociations:
+  - ext: vibescreener
+    name: VibeScreener Project
+    role: Editor
 mac:
   target:
     - target: dmg

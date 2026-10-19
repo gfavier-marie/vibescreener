@@ -6,7 +6,8 @@ self.addEventListener('activate', (e) => e.waitUntil(self.clients.claim()));
 
 self.addEventListener('fetch', (e) => {
   const url = new URL(e.request.url);
-  if (e.request.method !== 'GET' || url.origin !== location.origin || url.pathname.startsWith('/ws/')) return;
+  // Les projets partagés (/share/, chiffrés) ne sont jamais mis en cache.
+  if (e.request.method !== 'GET' || url.origin !== location.origin || url.pathname.startsWith('/ws/') || url.pathname.startsWith('/share/')) return;
   // Réseau d'abord (toujours la dernière version), cache en secours.
   e.respondWith(
     fetch(e.request)

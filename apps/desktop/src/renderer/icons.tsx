@@ -211,6 +211,14 @@ export const Folder = (p: Props) => (
     <path d="M2 4.5A1.5 1.5 0 0 1 3.5 3H6l1.5 1.5h5A1.5 1.5 0 0 1 14 6v5.5a1.5 1.5 0 0 1-1.5 1.5h-9A1.5 1.5 0 0 1 2 11.5z" />
   </Stroke>
 );
+export const Share = (p: Props) => (
+  <Stroke {...p} width={1.4}>
+    <circle cx="4" cy="8" r="2" />
+    <circle cx="12" cy="3.5" r="2" />
+    <circle cx="12" cy="12.5" r="2" />
+    <path d="M5.8 7l4.4-2.5M5.8 9l4.4 2.5" />
+  </Stroke>
+);
 export const Terminal = (p: Props) => (
   <Stroke {...p} width={1.4}>
     <rect x="1.5" y="2.5" width="13" height="11" rx="2" />

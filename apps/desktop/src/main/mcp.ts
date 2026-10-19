@@ -1,4 +1,4 @@
-// Serveur MCP local pour Claude Code (§11) : liste les sessions, lit une revue et montre ses
+// Serveur MCP local pour Claude Code (§11) : liste les sessions (revues) avec leur projet, lit une revue et montre ses
 // écrans (capture annotée, zooms, croquis, inspirations), en lecture seule. Sous-ensemble du transport
 // « Streamable HTTP » : sans état, une réponse JSON par requête, sur 127.0.0.1 uniquement.
 // Aucun import d'Electron ici : testable et lançable avec node.
@@ -8,7 +8,7 @@ import { createServer, type IncomingMessage, type Server, type ServerResponse } 
 import type { AddressInfo } from 'node:net';
 import { join } from 'node:path';
 import { loadImage } from '@napi-rs/canvas';
-import { allAnnotations, isSkippedPage, upgradeSession, type Session } from '@pastille/shared';
+import { allAnnotations, isSkippedPage, type Session } from '@pastille/shared';
 import { T } from '../texts/index.ts';
 import { loadTextMap } from './document/anchor.ts';
 import { cropJpeg, inspirationJpeg, position, screenJpeg, screenTitle, sourceLabel } from './export/build.ts';
@@ -56,8 +56,13 @@ export function createMcp(deps: { store: SessionStore; instructions?: (s: Sessio
   let server: Server | null = null;
   let hosts: string[] = [];
 
-  /** Sans id : la session ouverte, sinon la plus récente. */
+  /** Sans id : la session ouverte, sinon la plus récente. Son contexte est celui de son projet. */
   async function loadSession(id: unknown): Promise<{ session: Session; dir: string }> {
+    const { session, dir } = await findSession(id);
+    return { session: { ...session, context: store.contextOf(session) }, dir };
+  }
+
+  async function findSession(id: unknown): Promise<{ session: Session; dir: string }> {
     const open = store.get();
     if (id === undefined || id === '') {
       if (open) return { session: open, dir: store.dir(open) };
@@ -68,9 +73,8 @@ export function createMcp(deps: { store: SessionStore; instructions?: (s: Sessio
     // Un id ne contient ni « / » ni « .. » : on ne sort pas du dossier des sessions.
     if (typeof id !== 'string' || !/^[\w-]+$/.test(id)) throw new ToolError(T.mcp.notFound(String(id)));
     if (open?.id === id) return { session: open, dir: store.dir(open) };
-    const dir = join(store.sessionsDir, id);
     try {
-      return { session: upgradeSession(JSON.parse(await readFile(join(dir, 'session.json'), 'utf8')) as Session), dir };
+      return { session: await store.readSession(id), dir: join(store.sessionsDir, id) };
     } catch {
       throw new ToolError(T.mcp.notFoundList(id));
     }
@@ -80,7 +84,12 @@ export function createMcp(deps: { store: SessionStore; instructions?: (s: Sessio
     const list = await store.recent(20);
     if (!list.length) return T.mcp.noSessions;
     const openId = store.get()?.id;
-    return [T.mcp.sessions, ...list.map((s) => T.mcp.sessionLine(s.name, T.exports.date(s.updatedAt), s.points, s.id, s.id === openId))].join('\n');
+    const projects = await store.projects();
+    const projectName = (id: string) => projects.find((p) => p.id === id)?.name ?? '';
+    return [
+      T.mcp.sessions,
+      ...list.map((s) => T.mcp.sessionLine(s.name, projectName(s.projectId), T.exports.date(s.updatedAt), s.points, s.id, s.id === openId)),
+    ].join('\n');
   }
 
   async function review({ session, dir }: { session: Session; dir: string }): Promise<string> {
@@ -88,7 +97,8 @@ export function createMcp(deps: { store: SessionStore; instructions?: (s: Sessio
     const total = allAnnotations(session).length;
     // Pages de document sans point sautées, comme dans les exports ; les numéros d'écran ne changent pas.
     const shown = [...session.captures.entries()].filter(([, c]) => !isSkippedPage(c));
-    const lines = [`# ${session.name}`, '', `${E.date(session.createdAt)} · ${T.screens(shown.length)} · ${T.points(total)}`];
+    const project = store.projectOf(session)?.name;
+    const lines = [`# ${session.name}`, '', [project && M.project(project), E.date(session.createdAt), T.screens(shown.length), T.points(total)].filter(Boolean).join(' · ')];
     if (session.context?.trim()) lines.push('', E.context + E.colon + session.context.trim());
     lines.push('', `## ${E.instructions}`, '', (deps.instructions?.(session) ?? T.instructions).replaceAll('{N}', String(total)));
     const untranscribed = allAnnotations(session).filter((a) => ['recording', 'pending', 'error'].includes(a.transcription));

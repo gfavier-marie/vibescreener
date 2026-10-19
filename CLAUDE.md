@@ -16,6 +16,7 @@ Outil de revue d'interface : raccourci → capture → points numérotés dicté
   - Copie commentée au format du document : `commented-*.ts`, pdf-lib pour le PDF, jszip + @xmldom/xmldom pour Office.
 - Transcription : `whisper-server` (whisper.cpp) en processus enfant, modèle `models/ggml-large-v3-turbo-q5_0.bin`.
 - Parcours (`tour.ts`, `stitch.ts`) : la fenêtre cachée du mode vidéo filme la fenêtre choisie ; chaque état stable devient une capture, une page défilée est assemblée (lignes `TOUR {json}`).
+- Projets (`projects.json`, `projectId` sur chaque session) et partage (`share.ts`) : fichier `.vibescreener` (zip), ou lien de lecture chiffré déposé sur le relais (`/share/…`, R2 `vibescreener-shares`) et lu par la visionneuse `apps/pwa/view.html` ; la clé reste dans le fragment du lien.
 
 ## Commandes
 

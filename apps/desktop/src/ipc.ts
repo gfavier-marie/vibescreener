@@ -2,9 +2,11 @@
 
 import type { Geometry, Session } from '@pastille/shared';
 import type { LicenseView } from './main/license.ts';
+import type { ProjectSummary, SessionSummary } from './main/session-store.ts';
 import type { Settings, SettingsView } from './main/settings.ts';
+import type { ImportReport, ShareLink } from './main/share.ts';
 
-export type { LicenseView, Settings };
+export type { ImportReport, LicenseView, ProjectSummary, SessionSummary, Settings, ShareLink };
 
 /** Écran figé, et de quoi annoncer la capture : session, numéro d'écran, numéro du prochain point. */
 export type OverlayShow = {
@@ -132,14 +134,13 @@ export type PairingState = { qr: string; connected: boolean };
 
 export type SettingsTab = 'general' | 'permissions' | 'transcription' | 'export' | 'devices' | 'claude' | 'license';
 export type ExportResult = { ok: true; path: string } | { ok: false; error: string };
-
-/** Une session enregistrée, telle que listée (menu de l'icône, liste de toutes les sessions). */
-export type SessionSummary = { id: string; name: string; points: number; screens: number; updatedAt: string };
+export type ShareResult<T> = ({ ok: true } & T) | { ok: false; error: string };
 
 /** Ce qu'affichent le menu de l'icône et la barre flottante. */
 export type MenuState = {
   platform: 'mac' | 'win' | 'other';
   session: { name: string; points: number; screens: number; createdAt: string } | null;
+  project: string; // projet en cours, où naît la prochaine revue
   tablet: boolean; // tablette connectée
   pending: number; // transcriptions en cours
   errors: number; // transcriptions en erreur
@@ -172,10 +173,23 @@ export type PastilleApi = {
   discardAnnotation(id: string): void; // point resté vide (Échap) : retiré sans étape d'annulation
   updateSession(patch: { name?: string }): void;
   deleteCapture(id: string): void; // annulable par ⌘Z
-  listSessions(): Promise<SessionSummary[]>;
   openSession(id: string): Promise<void>;
   trashSession(id: string): Promise<boolean>; // après confirmation ; faux si annulé
-  onShowSessions(cb: () => void): () => void; // « Toutes les sessions… » du menu de l'icône
+  moveSession(id: string, projectId: string): Promise<void>;
+  // Projets
+  listProjects(): Promise<ProjectSummary[]>;
+  onProjects(cb: () => void): () => void; // liste des projets ou de leurs revues modifiée
+  onShowProjects(cb: (projectId?: string) => void): () => void; // « Projets… » du menu de l'icône, projet importé
+  createProject(name: string): Promise<string>;
+  updateProject(id: string, patch: { name?: string; context?: string }): Promise<void>;
+  newReview(projectId: string): Promise<void>;
+  trashProject(id: string): Promise<boolean>; // après confirmation ; faux si annulé
+  importProject(source?: File | string): Promise<ShareResult<{ report: ImportReport }> | null>; // fichier, lien collé ; rien : dialogue (null si annulé)
+  saveProjectFile(id: string): Promise<ShareResult<{ path: string }> | null>;
+  shareLink(id: string): Promise<ShareLink | undefined>;
+  publishLink(id: string): Promise<ShareResult<{ link: ShareLink }>>; // crée ou met à jour le lien, puis le copie
+  revokeLink(id: string): Promise<ShareResult<object>>;
+  onShareProgress(cb: (p: { projectId: string; done: number; total: number } | null) => void): () => void;
   addNote(): Promise<string>;
   updateNote(id: string, text: string): void;
   deleteNote(id: string): void;

@@ -1,5 +1,5 @@
 // Entrées du menu de l'icône (§4.7), partagées par le popover et le menu ≡ de l'éditeur : les quatre modes
-// (capture d'écran, vidéo, documents, parcours), export, sessions récentes, licence, mise à jour, appairage, réglages, quitter.
+// (capture d'écran, vidéo, documents, parcours), export, revues récentes, projets, licence, mise à jour, appairage, réglages, quitter.
 
 import type { MenuAction, MenuState } from '../../ipc.ts';
 import * as I from '../icons.tsx';
@@ -63,12 +63,12 @@ export function MenuItems({ s, act, inEditor = false }: { s: MenuState; act: (a:
               </button>
             </div>
           ))}
-          <button type="button" className="item" onClick={() => act({ type: 'sessions' })}>
-            <I.Folder />
-            <span>{T.menu.allSessions}</span>
-          </button>
         </>
       )}
+      <button type="button" className="item" onClick={() => act({ type: 'sessions' })}>
+        <I.Folder />
+        <span>{T.menu.projects}</span>
+      </button>
 
       <hr />
       {s.license.state !== 'licensed' && (

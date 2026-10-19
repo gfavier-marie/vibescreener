@@ -1,12 +1,15 @@
 // Stockage local : un dossier par session (session.json + captures/…), écrit de façon
 // atomique avec un anti-rebond de 300 ms. La session ouverte se rouvre au démarrage.
+// Projets : projects.json (nom, contexte) ; chaque session porte l'id de son projet.
 
 import { existsSync } from 'node:fs';
 import { mkdir, readdir, readFile, writeFile } from 'node:fs/promises';
 import { join } from 'node:path';
 import {
+  allAnnotations,
   findAnnotation,
   newNote,
+  newProject,
   newSession,
   renumber,
   upgradeSession,
@@ -14,6 +17,7 @@ import {
   type Capture,
   type Geometry,
   type Inspiration,
+  type Project,
   type Session,
 } from '@pastille/shared';
 import { T } from '../texts/index.ts';
@@ -32,16 +36,33 @@ export type UpdateOptions = {
   patchHistory?: boolean;
 };
 
-type State = { currentSessionId?: string };
+type State = { currentSessionId?: string; currentProjectId?: string };
+
+/** Une session enregistrée, telle que listée (menus, panneau des projets, MCP). */
+export type SessionSummary = { id: string; name: string; projectId: string; points: number; screens: number; updatedAt: string };
+
+/** Un projet et ses revues, la plus récente d'abord ; `updatedAt` : dernière activité ; `current` : la prochaine revue y naîtra. */
+export type ProjectSummary = Project & { sessions: SessionSummary[]; current: boolean };
 
 export type SessionStore = ReturnType<typeof createSessionStore>;
 
-/** `context` : contexte du projet (réglage), repris par chaque nouvelle session. */
-export function createSessionStore(root: string, onChange: (s: Session | null) => void = () => {}, context: () => string = () => '') {
+/**
+ * `onProjects` : liste des projets modifiée. `legacyContext` : contexte du projet tel qu'il était
+ * réglé avant les projets, donné une fois au premier projet.
+ */
+export function createSessionStore(
+  root: string,
+  opts: { onChange?: (s: Session | null) => void; onProjects?: () => void; legacyContext?: () => string } = {},
+) {
+  const onChange = opts.onChange ?? (() => {});
+  const onProjects = opts.onProjects ?? (() => {});
   const sessionsDir = join(root, 'sessions');
   const statePath = join(root, 'state.json');
+  const projectsPath = join(root, 'projects.json');
   let session: Session | null = null;
   let state: State = {};
+  let projects: Project[] = []; // ordre de création ; lus au premier besoin
+  let loadingProjects: Promise<void> | null = null;
   let timer: ReturnType<typeof setTimeout> | null = null;
   let undoStack: Session[] = [];
   let redoStack: Session[] = [];
@@ -67,6 +88,84 @@ export function createSessionStore(root: string, onChange: (s: Session | null) =
     return savingState;
   }
 
+  let savingProjects = Promise.resolve();
+  function saveProjects() {
+    const json = JSON.stringify(projects, null, 2);
+    savingProjects = savingProjects
+      .catch(() => {})
+      .then(async () => {
+        await mkdir(root, { recursive: true });
+        await writeAtomic(projectsPath, json);
+      });
+    onProjects();
+    return savingProjects;
+  }
+
+  async function readSession(id: string): Promise<Session> {
+    return upgradeSession(JSON.parse(await readFile(join(dirOf(id), 'session.json'), 'utf8')) as Session);
+  }
+
+  /** Session fermée modifiée sur le disque (déplacée dans un autre projet). */
+  async function writeSession(s: Session) {
+    await writeAtomic(join(dirOf(s.id), 'session.json'), JSON.stringify(s, null, 2));
+  }
+
+  async function sessionIds(): Promise<string[]> {
+    return existsSync(sessionsDir) ? (await readdir(sessionsDir)).filter((id) => existsSync(join(dirOf(id), 'session.json'))) : [];
+  }
+
+  /**
+   * Projets lus une fois. Le premier lancement après leur arrivée crée « Mes revues », qui reçoit
+   * les sessions existantes et le contexte réglé jusque-là.
+   */
+  async function loadProjects(): Promise<Project[]> {
+    await (loadingProjects ??= readProjects()); // une seule lecture, même pour des appels simultanés
+    return projects;
+  }
+
+  async function readProjects() {
+    if (existsSync(projectsPath)) {
+      projects = JSON.parse(await readFile(projectsPath, 'utf8')) as Project[];
+      return;
+    }
+    const first = newProject(T.projects.defaultName, opts.legacyContext?.());
+    projects = [first];
+    for (const id of await sessionIds()) {
+      try {
+        const s = await readSession(id);
+        if (!s.projectId) await writeSession({ ...s, projectId: first.id });
+      } catch {
+        // dossier illisible : ignoré
+      }
+    }
+    state.currentProjectId = first.id;
+    await saveState();
+    await saveProjects();
+  }
+
+  /** Projet d'une session ; une session sans projet connu est rangée dans le premier. */
+  function projectOf(s: Pick<Session, 'projectId'>): Project | undefined {
+    return projects.find((p) => p.id === s.projectId) ?? projects[0];
+  }
+
+  /** Projet où naît la prochaine revue : celui de la session ouverte, ou le dernier choisi. */
+  async function currentProject(): Promise<Project> {
+    const list = await loadProjects();
+    const found = list.find((p) => p.id === (session?.projectId ?? state.currentProjectId)) ?? list[0];
+    if (found) return found;
+    const p = newProject(T.projects.defaultName);
+    list.push(p);
+    state.currentProjectId = p.id;
+    await saveState();
+    await saveProjects();
+    return p;
+  }
+
+  /** Contexte repris par les exports et Claude Code : celui du projet, sinon celui de l'ancienne session. */
+  function contextOf(s: Session): string | undefined {
+    return projectOf(s)?.context?.trim() || s.context?.trim() || undefined;
+  }
+
   function scheduleSave() {
     if (timer) clearTimeout(timer);
     timer = setTimeout(() => void flush(), SAVE_DELAY_MS);
@@ -87,6 +186,7 @@ export function createSessionStore(root: string, onChange: (s: Session | null) =
   /** Rouvre la session en cours au démarrage (après un crash ou une fermeture). */
   async function restore(): Promise<Session | null> {
     if (existsSync(statePath)) state = JSON.parse(await readFile(statePath, 'utf8')) as State;
+    await loadProjects();
     const path = state.currentSessionId && join(dirOf(state.currentSessionId), 'session.json');
     session = path && existsSync(path) ? upgradeSession(JSON.parse(await readFile(path, 'utf8')) as Session) : null;
     onChange(session);
@@ -96,11 +196,14 @@ export function createSessionStore(root: string, onChange: (s: Session | null) =
   /** La session ouverte, créée à la première capture si besoin. */
   async function ensure(): Promise<Session> {
     if (session) return session;
+    const project = await currentProject();
+    if (session) return session; // créée pendant la lecture des projets
     const now = new Date();
-    const s = newSession(now, context() || undefined, T.sessionName(now));
+    const s = newSession(now, undefined, T.sessionName(now), project.id);
     await mkdir(join(dirOf(s.id), 'captures'), { recursive: true });
     session = s;
     state.currentSessionId = s.id;
+    state.currentProjectId = project.id;
     await saveState();
     await flush();
     onChange(session);
@@ -230,20 +333,24 @@ export function createSessionStore(root: string, onChange: (s: Session | null) =
     commit();
   }
 
-  /** Sessions récentes, la plus récente d'abord (menu de l'icône). */
-  async function recent(limit = 5) {
-    const ids = existsSync(sessionsDir) ? await readdir(sessionsDir) : [];
-    const list = [];
-    for (const id of ids) {
+  function summary(s: Session): SessionSummary {
+    return {
+      id: s.id,
+      name: s.name,
+      projectId: projectOf(s)?.id ?? '',
+      updatedAt: s.updatedAt,
+      points: allAnnotations(s).length,
+      screens: s.captures.length,
+    };
+  }
+
+  /** Sessions récentes, la plus récente d'abord (menu de l'icône) ; la session ouverte est lue en mémoire. */
+  async function recent(limit = 5): Promise<SessionSummary[]> {
+    await loadProjects();
+    const list: SessionSummary[] = [];
+    for (const id of await sessionIds()) {
       try {
-        const s = JSON.parse(await readFile(join(dirOf(id), 'session.json'), 'utf8')) as Session;
-        list.push({
-          id: s.id,
-          name: s.name,
-          updatedAt: s.updatedAt,
-          points: s.captures.reduce((n, c) => n + c.annotations.length, 0),
-          screens: s.captures.length,
-        });
+        list.push(summary(session?.id === id ? session : await readSession(id)));
       } catch {
         // dossier incomplet : ignoré
       }
@@ -251,15 +358,102 @@ export function createSessionStore(root: string, onChange: (s: Session | null) =
     return list.sort((a, b) => b.updatedAt.localeCompare(a.updatedAt)).slice(0, limit);
   }
 
-  /** Rouvre une session (pour la compléter ou la réexporter). */
+  /** Tous les projets avec leurs revues, le plus récemment actif d'abord. */
+  async function listProjects(): Promise<ProjectSummary[]> {
+    const sessions = await recent(Infinity);
+    const current = (await currentProject()).id;
+    return (await loadProjects())
+      .map((p) => {
+        const own = sessions.filter((s) => s.projectId === p.id);
+        return { ...p, sessions: own, current: p.id === current, updatedAt: [p.updatedAt, ...own.map((s) => s.updatedAt)].sort().at(-1)! };
+      })
+      .sort((a, b) => b.updatedAt.localeCompare(a.updatedAt));
+  }
+
+  /** Rouvre une session (pour la compléter ou la réexporter) ; son projet devient le projet en cours. */
   async function open(id: string) {
     await flush();
-    session = upgradeSession(JSON.parse(await readFile(join(dirOf(id), 'session.json'), 'utf8')) as Session);
+    await loadProjects();
+    session = await readSession(id);
     undoStack = [];
     redoStack = [];
     state.currentSessionId = id;
+    state.currentProjectId = projectOf(session)?.id;
     await saveState();
     onChange(session);
+  }
+
+  async function createProject(name: string): Promise<Project> {
+    const list = await loadProjects();
+    const p = newProject(name.trim() || T.projects.untitled);
+    list.push(p);
+    await saveProjects();
+    return p;
+  }
+
+  /** Projet ajouté ou remplacé tel quel (import d'un projet partagé). */
+  async function putProject(p: Project) {
+    const list = await loadProjects();
+    const i = list.findIndex((x) => x.id === p.id);
+    if (i >= 0) list[i] = p;
+    else list.push(p);
+    await saveProjects();
+    if (session && projectOf(session)?.id === p.id) onChange(session);
+  }
+
+  async function updateProject(id: string, patch: { name?: string; context?: string }) {
+    const p = (await loadProjects()).find((x) => x.id === id);
+    if (!p) return;
+    if (patch.name !== undefined) p.name = patch.name.trim() || p.name;
+    if (patch.context !== undefined) p.context = patch.context.trim() || undefined;
+    p.updatedAt = new Date().toISOString();
+    await saveProjects();
+    if (session && projectOf(session)?.id === id) onChange(session);
+  }
+
+  /** Projet retiré de la liste, ses sessions déjà mises à la corbeille. */
+  async function removeProject(id: string) {
+    projects = (await loadProjects()).filter((p) => p.id !== id);
+    if (state.currentProjectId === id) {
+      state.currentProjectId = undefined;
+      await saveState();
+    }
+    await saveProjects();
+  }
+
+  /** Revue remplacée par une version reçue (import d'un projet partagé), en mémoire si elle est ouverte. */
+  async function replace(s: Session) {
+    if (session?.id !== s.id) {
+      await writeSession(s);
+      onProjects();
+      return;
+    }
+    session = s;
+    undoStack = [];
+    redoStack = [];
+    await flush();
+    onChange(session);
+    onProjects();
+  }
+
+  /** Revue rangée dans un autre projet. */
+  async function moveSession(id: string, projectId: string) {
+    if (session?.id === id) {
+      update((s) => (s.projectId = projectId), { patchHistory: true });
+      state.currentProjectId = projectId;
+      await saveState();
+    } else {
+      await writeSession({ ...(await readSession(id)), projectId, updatedAt: new Date().toISOString() });
+    }
+    onProjects();
+  }
+
+  /** « Nouvelle revue » dans un projet : la session ouverte est fermée, la suivante naîtra dans ce projet. */
+  async function startIn(projectId: string) {
+    await close();
+    state.currentProjectId = projectId;
+    await saveState();
+    onProjects();
   }
 
   /** « Nouvelle session » : la session actuelle est fermée, la suivante naîtra à la prochaine capture. */
@@ -275,8 +469,22 @@ export function createSessionStore(root: string, onChange: (s: Session | null) =
 
   return {
     get: () => session,
-    dir: (s: Session) => dirOf(s.id),
+    dir: (s: Pick<Session, 'id'>) => dirOf(s.id),
     sessionsDir,
+    readSession,
+    writeSession,
+    projects: loadProjects,
+    projectOf,
+    currentProject,
+    contextOf,
+    listProjects,
+    createProject,
+    putProject,
+    updateProject,
+    removeProject,
+    moveSession,
+    startIn,
+    replace,
     restore,
     ensure,
     update,

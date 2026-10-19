@@ -36,6 +36,33 @@ const fr = {
   welcomeTitle: 'Tablette appairée',
   welcomeText: "Installez-la : Partager › Sur l'écran d'accueil. Elle s'ouvrira ensuite sans barre d'adresse.",
   welcomeStart: 'Commencer à dessiner',
+  // Visionneuse d'un projet partagé par lien (view.html)
+  view: {
+    loading: 'Ouverture du projet chiffré…',
+    loadingReview: 'Ouverture de la revue…',
+    readOnly: 'Lecture seule',
+    reviews: (n: number) => `${n} revue${n > 1 ? 's' : ''}`,
+    counts: (points: number, screens: number) => `${points} point${points > 1 ? 's' : ''} · ${screens} écran${screens > 1 ? 's' : ''}`,
+    sharedOn: (date: string) => `partagé le ${date}`,
+    back: 'Toutes les revues',
+    notes: 'Remarques générales',
+    screen: (n: number) => `Écran ${n}`,
+    page: (n: number) => `page ${n}`,
+    slide: (n: number) => `diapositive ${n}`,
+    sketch: 'Croquis',
+    inspiration: 'Inspiration : le résultat souhaité, pris sur un autre site',
+    noReviews: 'Ce projet ne contient pas encore de revue.',
+    importHint: 'Vous avez VibeScreener ? Dans Projets › Importer…, collez ce lien : le projet s’ajoute aux vôtres, avec ses revues.',
+    copyLink: 'Copier le lien',
+    copied: 'Lien copié',
+    secure: 'Chiffré de bout en bout : la clé est dans le lien, le serveur ne peut pas lire ce projet.',
+    errors: {
+      link: 'Ce lien est incomplet : demandez-le à nouveau à la personne qui vous l’a envoyé.',
+      expired: 'Ce lien ne s’ouvre plus : son partage a été arrêté, ou il a expiré.',
+      key: 'Ce lien est incomplet ou abîmé : le projet ne peut pas être déchiffré.',
+      network: 'Le projet n’a pas pu être chargé. Vérifiez la connexion, puis rechargez la page.',
+    },
+  },
 };
 
 type Texts = typeof fr;
@@ -73,6 +100,32 @@ const en: Texts = {
   welcomeTitle: 'Tablet paired',
   welcomeText: 'Install it: Share › Add to Home Screen. It will then open without an address bar.',
   welcomeStart: 'Start drawing',
+  view: {
+    loading: 'Opening the encrypted project…',
+    loadingReview: 'Opening the review…',
+    readOnly: 'Read-only',
+    reviews: (n) => `${n} review${n === 1 ? '' : 's'}`,
+    counts: (points, screens) => `${points} point${points === 1 ? '' : 's'} · ${screens} screen${screens === 1 ? '' : 's'}`,
+    sharedOn: (date) => `shared on ${date}`,
+    back: 'All reviews',
+    notes: 'General remarks',
+    screen: (n) => `Screen ${n}`,
+    page: (n) => `page ${n}`,
+    slide: (n) => `slide ${n}`,
+    sketch: 'Sketch',
+    inspiration: 'Inspiration: the desired result, taken from another site',
+    noReviews: 'This project has no reviews yet.',
+    importHint: 'Have VibeScreener? In Projects › Import…, paste this link: the project is added to yours, with its reviews.',
+    copyLink: 'Copy link',
+    copied: 'Link copied',
+    secure: 'End-to-end encrypted: the key is in the link, the server can’t read this project.',
+    errors: {
+      link: 'This link is incomplete: ask the person who sent it to send it again.',
+      expired: 'This link no longer opens: sharing was stopped, or it expired.',
+      key: 'This link is incomplete or damaged: the project can’t be decrypted.',
+      network: 'The project couldn’t be loaded. Check your connection, then reload the page.',
+    },
+  },
 };
 
 const es: Texts = {
@@ -108,6 +161,32 @@ const es: Texts = {
   welcomeTitle: 'Tableta vinculada',
   welcomeText: 'Instálala: Compartir › Añadir a pantalla de inicio. Después se abrirá sin barra de direcciones.',
   welcomeStart: 'Empezar a dibujar',
+  view: {
+    loading: 'Abriendo el proyecto cifrado…',
+    loadingReview: 'Abriendo la revisión…',
+    readOnly: 'Solo lectura',
+    reviews: (n) => `${n} ${n === 1 ? 'revisión' : 'revisiones'}`,
+    counts: (points, screens) => `${points} punto${points === 1 ? '' : 's'} · ${screens} pantalla${screens === 1 ? '' : 's'}`,
+    sharedOn: (date) => `compartido el ${date}`,
+    back: 'Todas las revisiones',
+    notes: 'Observaciones generales',
+    screen: (n) => `Pantalla ${n}`,
+    page: (n) => `página ${n}`,
+    slide: (n) => `diapositiva ${n}`,
+    sketch: 'Boceto',
+    inspiration: 'Inspiración: el resultado deseado, tomado de otra web',
+    noReviews: 'Este proyecto aún no tiene revisiones.',
+    importHint: '¿Tienes VibeScreener? En Proyectos › Importar…, pega este enlace: el proyecto se añade a los tuyos, con sus revisiones.',
+    copyLink: 'Copiar el enlace',
+    copied: 'Enlace copiado',
+    secure: 'Cifrado de extremo a extremo: la clave está en el enlace, el servidor no puede leer este proyecto.',
+    errors: {
+      link: 'Este enlace está incompleto: pídeselo de nuevo a quien te lo envió.',
+      expired: 'Este enlace ya no se abre: se dejó de compartir o caducó.',
+      key: 'Este enlace está incompleto o dañado: no se puede descifrar el proyecto.',
+      network: 'No se ha podido cargar el proyecto. Comprueba la conexión y vuelve a cargar la página.',
+    },
+  },
 };
 
 const de: Texts = {
@@ -143,6 +222,32 @@ const de: Texts = {
   welcomeTitle: 'Tablet gekoppelt',
   welcomeText: 'Installiere es: Teilen › Zum Home-Bildschirm. Danach öffnet es sich ohne Adressleiste.',
   welcomeStart: 'Loszeichnen',
+  view: {
+    loading: 'Verschlüsseltes Projekt wird geöffnet…',
+    loadingReview: 'Review wird geöffnet…',
+    readOnly: 'Nur lesen',
+    reviews: (n) => `${n} ${n === 1 ? 'Review' : 'Reviews'}`,
+    counts: (points, screens) => `${points} ${points === 1 ? 'Punkt' : 'Punkte'} · ${screens} ${screens === 1 ? 'Screen' : 'Screens'}`,
+    sharedOn: (date) => `geteilt am ${date}`,
+    back: 'Alle Reviews',
+    notes: 'Allgemeine Anmerkungen',
+    screen: (n) => `Screen ${n}`,
+    page: (n) => `Seite ${n}`,
+    slide: (n) => `Folie ${n}`,
+    sketch: 'Skizze',
+    inspiration: 'Inspiration: das gewünschte Ergebnis, von einer anderen Website',
+    noReviews: 'Dieses Projekt enthält noch kein Review.',
+    importHint: 'Du hast VibeScreener? Füge diesen Link unter Projekte › Importieren… ein: Das Projekt kommt mit seinen Reviews zu deinen hinzu.',
+    copyLink: 'Link kopieren',
+    copied: 'Link kopiert',
+    secure: 'Ende-zu-Ende-verschlüsselt: Der Schlüssel steckt im Link, der Server kann dieses Projekt nicht lesen.',
+    errors: {
+      link: 'Dieser Link ist unvollständig: Bitte die Person, die ihn geschickt hat, ihn erneut zu senden.',
+      expired: 'Dieser Link öffnet sich nicht mehr: Das Teilen wurde beendet, oder er ist abgelaufen.',
+      key: 'Dieser Link ist unvollständig oder beschädigt: Das Projekt lässt sich nicht entschlüsseln.',
+      network: 'Das Projekt konnte nicht geladen werden. Prüfe die Verbindung und lade die Seite neu.',
+    },
+  },
 };
 
 const it: Texts = {
@@ -178,9 +283,35 @@ const it: Texts = {
   welcomeTitle: 'Tablet abbinato',
   welcomeText: 'Installalo: Condividi › Aggiungi alla schermata Home. Poi si aprirà senza barra degli indirizzi.',
   welcomeStart: 'Inizia a disegnare',
+  view: {
+    loading: 'Apertura del progetto crittografato…',
+    loadingReview: 'Apertura della revisione…',
+    readOnly: 'Sola lettura',
+    reviews: (n) => `${n} ${n === 1 ? 'revisione' : 'revisioni'}`,
+    counts: (points, screens) => `${points} ${points === 1 ? 'punto' : 'punti'} · ${screens} ${screens === 1 ? 'schermata' : 'schermate'}`,
+    sharedOn: (date) => `condiviso il ${date}`,
+    back: 'Tutte le revisioni',
+    notes: 'Osservazioni generali',
+    screen: (n) => `Schermata ${n}`,
+    page: (n) => `pagina ${n}`,
+    slide: (n) => `diapositiva ${n}`,
+    sketch: 'Schizzo',
+    inspiration: 'Ispirazione: il risultato desiderato, preso da un altro sito',
+    noReviews: 'Questo progetto non contiene ancora revisioni.',
+    importHint: 'Hai VibeScreener? In Progetti › Importa…, incolla questo link: il progetto si aggiunge ai tuoi, con le sue revisioni.',
+    copyLink: 'Copia il link',
+    copied: 'Link copiato',
+    secure: 'Crittografato end-to-end: la chiave è nel link, il server non può leggere questo progetto.',
+    errors: {
+      link: 'Questo link è incompleto: chiedilo di nuovo a chi te l’ha inviato.',
+      expired: 'Questo link non si apre più: la condivisione è stata interrotta, oppure è scaduto.',
+      key: 'Questo link è incompleto o danneggiato: il progetto non può essere decifrato.',
+      network: 'Il progetto non è stato caricato. Controlla la connessione, poi ricarica la pagina.',
+    },
+  },
 };
 
 export const DICTS: Record<Lang, Texts> = { fr, en, es, de, it };
-const lang = pickLang(navigator.languages);
+export const lang = pickLang(navigator.languages);
 export const T = DICTS[lang];
 document.documentElement.lang = lang;

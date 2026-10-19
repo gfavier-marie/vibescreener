@@ -9,6 +9,7 @@
   },
   "dependencies": {
     "@pastille/shared": "workspace:*",
+    "jszip": "^3.10.2",
     "perfect-freehand": "^1.2.3"
   },
   "devDependencies": {

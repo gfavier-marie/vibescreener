@@ -1,6 +1,6 @@
 // Règles du modèle partagées : création de session, numérotation continue.
 
-import type { Annotation, Capture, Note, Session } from './model.ts';
+import type { Annotation, Capture, Note, Project, Session } from './model.ts';
 
 const pad = (n: number) => String(n).padStart(2, '0');
 
@@ -9,9 +9,14 @@ export function defaultSessionName(d: Date): string {
   return `Revue ${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())} ${pad(d.getHours())}h${pad(d.getMinutes())}`;
 }
 
-export function newSession(now: Date, context?: string, name = defaultSessionName(now)): Session {
+export function newSession(now: Date, context?: string, name = defaultSessionName(now), projectId?: string): Session {
   const iso = now.toISOString();
-  return { id: crypto.randomUUID(), name, context, createdAt: iso, updatedAt: iso, captures: [] };
+  return { id: crypto.randomUUID(), name, projectId, context, createdAt: iso, updatedAt: iso, captures: [] };
+}
+
+export function newProject(name: string, context?: string, now = new Date()): Project {
+  const iso = now.toISOString();
+  return { id: crypto.randomUUID(), name, context: context?.trim() || undefined, createdAt: iso, updatedAt: iso };
 }
 
 /** Toutes les annotations dans l'ordre de lecture : captures, puis ordre de création. */
