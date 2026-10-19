@@ -93,7 +93,7 @@ Priorités : **[M]** indispensable en V1, **[S]** souhaité en V1, **[C]** plus 
 ### 4.3 Éditeur d'annotations
 
 - **[M]** S'ouvre au premier plan juste après la capture, image ajustée à la fenêtre. Molette = zoom, Espace maintenu + glisser = déplacement.
-- **[M]** Disposition : la capture au centre ; à droite la liste des points de la capture (numéro, texte éditable, statut de transcription, vignette du croquis) ; en bas les vignettes des captures de la session ; en haut le nom de session, le compteur total de points, l'état de la tablette et le bouton Exporter.
+- **[M]** Disposition : la capture au centre ; à droite la liste des points de la capture (numéro, texte éditable, statut de transcription, vignette du croquis) ; en bas les vignettes des captures de la session, réductibles à une barre fine (chevron) ; en haut le nom de session, le compteur total de points, l'état de la tablette, le menu **Nouveau ▾** (les quatre modes, §4.7), Partager et Exporter (revue du 19 oct. 2026 : les modes au bout des vignettes prenaient la moitié de la largeur).
 - Types d'annotation, tous numérotés :
     - **[M]** **Point** : clic simple. Pastille ronde numérotée.
     - **[S]** **Zone** : glisser. Rectangle, pour « toute cette section ».
@@ -138,7 +138,7 @@ Priorités : **[M]** indispensable en V1, **[S]** souhaité en V1, **[C]** plus 
 ### 4.7 Icône et menu
 
 - **[M]** Menu : Nouvelle session, Ouvrir l'éditeur, Exporter le PDF, Appairer une tablette (QR), Réglages, Quitter.
-- En tête du menu, les quatre modes, dans l'ordre et sous les noms du site : Capture d'écran (⌃⌥⌘P), Vidéo (⌃⌥⌘R), Documents (§4.10), Parcours (§4.11). Chacun a sa couleur et sa phrase ; les mêmes, en cartes, remplissent l'éditeur vide (demandé le 13 oct. 2026).
+- En tête du menu, les quatre modes, dans l'ordre et sous les noms du site : Capture d'écran (⌃⌥⌘P), Vidéo (⌃⌥⌘R), Documents (§4.10), Parcours (§4.11). Chacun a sa couleur et sa phrase ; les mêmes, en cartes, remplissent l'éditeur vide (demandé le 13 oct. 2026) : nom et phrase seulement, le mode d'emploi en info-bulle, une apparition en cascade et une animation au survol (revue du 19 oct. 2026). Dans l'éditeur, ils sont dans le menu Nouveau de l'en-tête, pas dans le menu ≡.
 - **[S]** L'icône signale l'état : session active, nombre de points, tablette connectée, transcriptions en cours.
 - Les mêmes entrées sont reprises dans le menu ≡ en haut à droite de l'éditeur (demandé le 7 oct. 2026).
 
@@ -157,7 +157,7 @@ Un PDF, un Word, un Excel ou un PowerPoint s'ouvre dans l'app et se commente com
 
 - Ouverture :
   - par le mode « Documents » (menu de l'icône et menu ≡) ;
-  - par un bouton de l'éditeur (éditeur vide et bout des vignettes) ;
+  - par l'éditeur (cartes de l'éditeur vide, menu Nouveau de l'en-tête) ;
   - en déposant le fichier sur l'éditeur.
 - Formats : .pdf, .docx/.docm/.dotx, .xlsx/.xlsm/.xltx, .pptx/.pptm/.potx. Les anciens formats (.doc, .xls, .ppt) et les fichiers protégés par mot de passe sont refusés avec un message.
 - Le document devient une session nommée d'après le fichier, sauf si la session ouverte est vide. Comme pour la capture, un essai terminé bloque l'ouverture d'un nouveau document.
@@ -167,7 +167,7 @@ Un PDF, un Word, un Excel ou un PowerPoint s'ouvre dans l'app et se commente com
   - une feuille Excel entière (sa zone utilisée), avec ses en-têtes A, B, C et 1, 2, 3 ; une très grande feuille (au-delà d'environ 800 lignes de 30 colonnes) est coupée en bandes de lignes, pour que l'image reste affichable.
 
   Au-delà de 200 pages, seules les premières sont ouvertes.
-- L'éditeur sert de visionneuse. Les pages se suivent dans une seule vue, ajustées à la largeur, comme dans Word ou un lecteur PDF : la molette fait défiler d'une page à l'autre, ⇧ + molette de côté (feuille Excel zoomée) et ⌘ / Ctrl + molette zoome. La page au milieu de l'écran est la page en cours. Un bouton de la barre d'aide masque les vignettes du bas, pour laisser toute la place au document. Points, zones, flèches, dictée, croquis et inspirations marchent comme sur une capture.
+- L'éditeur sert de visionneuse. Les pages se suivent dans une seule vue, ajustées à la largeur, comme dans Word ou un lecteur PDF : la molette fait défiler d'une page à l'autre, ⇧ + molette de côté (feuille Excel zoomée) et ⌘ / Ctrl + molette zoome. La page au milieu de l'écran est la page en cours. Le chevron des vignettes du bas les réduit, pour laisser toute la place au document. Points, zones, flèches, dictée, croquis et inspirations marchent comme sur une capture.
 - Exports pour l'IA et MCP :
   - les pages sans point sont sautées ;
   - les titres sont du type « Page 3 / 12 — rapport.pdf », « Diapositive 4 / 20 — deck.pptx », « Feuille Ventes (A1:G120) — budget.xlsx » ;
@@ -192,7 +192,7 @@ Un PDF, un Word, un Excel ou un PowerPoint s'ouvre dans l'app et se commente com
 
 On se promène vite dans un logiciel ; à l'arrêt, toute son interface est en captures, prête à commenter ou à donner à l'IA.
 
-- Démarrage : le mode « Parcours » (menu de l'icône, menu ≡, éditeur vide et bout des vignettes). L'overlay de capture s'ouvre : un clic choisit la fenêtre à suivre (hors de toute fenêtre, l'écran entier), Échap annule. Même blocage que la capture après l'essai.
+- Démarrage : le mode « Parcours » (menu de l'icône, éditeur vide, menu Nouveau de l'éditeur). L'overlay de capture s'ouvre : un clic choisit la fenêtre à suivre (hors de toute fenêtre, l'écran entier), Échap annule. Même blocage que la capture après l'essai.
 - Pendant le parcours :
   - pas de micro, pas de clics globaux (ni Accessibilité) : tout se lit dans les images de la fenêtre ;
   - l'icône passe en enregistrement, son menu dit « Arrêter le parcours (N écrans) » ;
@@ -228,7 +228,9 @@ Un projet regroupe plusieurs revues ; il se partage avec d'autres personnes.
   - revues ajoutées, retirées (corbeille, rangées ailleurs), projet renommé ou contexte changé : visibles partout ;
   - le créateur peut « Arrêter le partage » (effacé du relais pour tous, chacun garde sa copie) ; un collaborateur « Quitte le partage » ;
   - un partage resté 30 jours sans modification est effacé par une tâche quotidienne du relais ; un fichier de plus de 90 Mo chiffré ne passe pas ;
-  - pas de comptes : quiconque a le lien de collaboration peut tout modifier ; les dictées sont transcrites par l'ordinateur qui les a enregistrées (l'audio ne part pas).
+  - pas de comptes : quiconque a le lien de collaboration peut tout modifier ; les dictées sont transcrites par l'ordinateur qui les a enregistrées (l'audio ne part pas) ;
+  - **qui a dit quoi** (revue du 19 oct. 2026) : « Votre nom », demandé au premier partage en ligne (le bouton attend un nom) et proposé en rejoignant un projet, est gardé dans les réglages de l'ordinateur ; chaque point et remarque ajouté ensuite en porte le nom (`author`), affiché dans l'éditeur quand le projet est partagé et dans la visionneuse ;
+  - le panneau tient en peu de lignes : une par lien (ce qu'il permet en info-bulle), une pour le nom, une pour le fichier projet.
 - **Fichier projet** (`.vibescreener`, un zip) : le projet et ses revues (captures, textes des pages, documents, croquis, inspirations, dictées non transcrites), à envoyer par e-mail ou messagerie. Il s'importe par Importer…, en le déposant sur l'éditeur ou d'un double-clic.
 - **Import** (fichier, ou lien de lecture collé dans Importer…) : une copie ; le projet est ajouté, ou complété s'il existe ; pour chaque revue, la version la plus récente est gardée (« ajoutée », « mise à jour », « déjà à jour », « gardée, plus récente ici »). Une dictée restée en attente chez l'autre arrive en erreur, à réessayer.
 

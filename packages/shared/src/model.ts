@@ -61,6 +61,7 @@ export type Annotation = {
   transcription: 'none' | 'recording' | 'pending' | 'done' | 'error';
   sketches: Sketch[];
   inspirations?: Inspiration[]; // captures d'autres sites : le résultat souhaité pour ce point
+  author?: string; // nom de qui l'a posé (réglage « Votre nom »), montré dans un projet partagé
   createdAt: string;
   updatedAt: string;
 };
@@ -71,4 +72,4 @@ export type Sketch = { id: string; png: string; strokes: string; createdAt: stri
 export type Inspiration = { id: string; image: string; createdAt: string; source?: { app?: string; windowTitle?: string } };
 
 /** Remarque générale : un commentaire sans point, tapé ou dicté comme celui d'un point. */
-export type Note = Pick<Annotation, 'id' | 'text' | 'input' | 'audio' | 'transcription' | 'createdAt' | 'updatedAt'>;
+export type Note = Pick<Annotation, 'id' | 'text' | 'input' | 'audio' | 'transcription' | 'author' | 'createdAt' | 'updatedAt'>;

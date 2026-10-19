@@ -122,6 +122,7 @@ const store = createSessionStore(app.getPath('userData'), {
     void sync.changedAll();
   },
   legacyContext: () => settings.get().context, // contexte réglé avant les projets, donné au premier projet
+  author: () => settings.get().authorName,
 });
 // Partage des projets : fichier .vibescreener, ou en ligne, synchronisé (chiffré) par le même relais que la tablette.
 const sharing = createSharing({ store });

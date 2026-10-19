@@ -582,3 +582,12 @@ Choix du 19 oct. : **les deux** façons de partager, le fichier d'abord (il sert
 - [ ] Déploiement : retirer la règle d'expiration du bucket (`wrangler r2 bucket lifecycle remove vibescreener-shares expire`), `pnpm relay:deploy` (tâche planifiée), `pnpm site:deploy`, version **0.17.0**
 - [ ] Essai réel entre ton Mac et ton PC Windows
 
+## Revue de l'interface (19 oct. 2026, 11 h 11)
+
+- [x] Partage : une ligne par lien (lecture, collaboration), ce qu'il permet en info-bulle ; « Synchronisé » en tête ; fichier projet sur une ligne, sans sous-texte
+- [x] « Votre nom » (réglage local) : demandé au premier partage en ligne, ouvert en rejoignant un projet ; chaque point et remarque ajouté en porte le nom, montré dans l'éditeur d'un projet partagé et dans la visionneuse. 1 test
+- [x] Éditeur : menu **Nouveau ▾** dans l'en-tête (les quatre modes, retirés du bout des vignettes et du menu ≡) ; vignettes réductibles à une barre fine « 7 écrans ⌃ » (remplace « Masquer les pages » des documents)
+- [x] Éditeur vide : cartes allégées (nom et une phrase, mode d'emploi en info-bulle), apparition en cascade, survol animé à la couleur du mode (sans animation si le système la réduit)
+- [x] Déploiement (19 oct.) : relais (visionneuse), version **0.18.0**
+- [ ] Essai dans l'app : partage, nom, menu Nouveau, vignettes réduites, éditeur vide
+

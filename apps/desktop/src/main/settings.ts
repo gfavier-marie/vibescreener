@@ -25,6 +25,7 @@ export type Settings = {
   floatingBar: boolean; // barre flottante pendant une session
   mcpSeenAt: string; // dernière connexion de Claude Code au serveur MCP (ISO), vide si jamais
   updatingTo: string; // version visée par une mise à jour lancée depuis l'app, vérifiée au lancement suivant
+  authorName: string; // « Votre nom » : signe les points et remarques, vu par les autres dans un projet partagé
 };
 
 /** Ce que voit la fenêtre de réglages : jamais la clé elle-même. */
@@ -57,6 +58,7 @@ export function createSettings(dataDir: string, documentsDir: string, lang: { sy
     floatingBar: false,
     mcpSeenAt: '',
     updatingTo: '',
+    authorName: '',
   };
   const existed = existsSync(path);
   const stored = existed ? (JSON.parse(readFileSync(path, 'utf8')) as Partial<Settings> & { apiKey?: string }) : {};

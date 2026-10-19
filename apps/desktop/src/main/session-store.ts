@@ -49,11 +49,12 @@ export type SessionStore = ReturnType<typeof createSessionStore>;
 
 /**
  * `onProjects` : liste des projets modifiée. `legacyContext` : contexte du projet tel qu'il était
- * réglé avant les projets, donné une fois au premier projet.
+ * réglé avant les projets, donné une fois au premier projet. `author` : nom réglé, qui signe les
+ * points et remarques ajoutés (vu dans un projet partagé).
  */
 export function createSessionStore(
   root: string,
-  opts: { onChange?: (s: Session | null) => void; onProjects?: () => void; legacyContext?: () => string } = {},
+  opts: { onChange?: (s: Session | null) => void; onProjects?: () => void; legacyContext?: () => string; author?: () => string } = {},
 ) {
   const onChange = opts.onChange ?? (() => {});
   const onProjects = opts.onProjects ?? (() => {});
@@ -71,6 +72,10 @@ export function createSessionStore(
   let saving = Promise.resolve();
 
   const dirOf = (id: string) => join(sessionsDir, id);
+  const signed = () => {
+    const author = opts.author?.().trim();
+    return author ? { author } : {};
+  };
 
   async function writeAtomic(path: string, data: string) {
     await writeFile(path + '.tmp', data);
@@ -265,6 +270,7 @@ export function createSessionStore(
       input: 'typed',
       transcription: 'none',
       sketches: [],
+      ...signed(),
       createdAt: now,
       updatedAt: now,
     };
@@ -275,7 +281,7 @@ export function createSessionStore(
   /** Nouvelle remarque générale vide (annulable), dans la session ouverte ou une nouvelle. */
   async function addNote(): Promise<string> {
     await ensure();
-    const note = newNote();
+    const note = { ...newNote(), ...signed() };
     update((s) => (s.notes = [...(s.notes ?? []), note]), { undoable: true });
     return note.id;
   }

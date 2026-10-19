@@ -36,6 +36,10 @@ export function ProjectsPanel(props: {
   const [view, setView] = useState<ShareView | undefined>(); // partage en ligne du projet choisi
   const [publishing, setPublishing] = useState(false);
   const [notice, setNotice] = useState<Notice | null>(props.initialNotice ?? null);
+  // « Votre nom » : réglage de l'app, qui signe les points ajoutés aux projets partagés.
+  const [author, setAuthor] = useState('');
+  useEffect(() => void api.getSettings().then((s) => setAuthor(s.authorName)), []);
+  const saveAuthor = () => void api.updateSettings({ authorName: author.trim() });
   // Contexte en cours de saisie : enregistré à la sortie du champ, ou à la fermeture du panneau (clic à côté, Échap).
   const typedContext = useRef<{ id: string; text: string } | null>(null);
   const saveContext = () => {
@@ -72,12 +76,14 @@ export function ProjectsPanel(props: {
     setNotice(importNotice(r));
     if (r?.ok) {
       select(r.report.projectId);
+      if (r.report.joined) setShareOpen(true); // projet rejoint : son partage s'ouvre, avec « Votre nom »
       setImporting(false);
       setLinkText('');
     }
   }
 
   async function publish(id: string) {
+    saveAuthor();
     setNotice(null);
     setPublishing(true);
     const r = await api.publishLink(id);
@@ -211,23 +217,21 @@ export function ProjectsPanel(props: {
             {shareOpen && (
               <div className="share">
                 <section>
-                  <h3>{P.onlineTitle}</h3>
-                  {!view && (
-                    <>
-                      <p className="hint">{P.onlineHint}</p>
-                      <div className="link-row">
-                        <button type="button" className="btn primary" disabled={publishing || project.sessions.length === 0} onClick={() => void publish(project.id)}>
-                          {publishing && <I.Spinner size={13} />}
-                          {P.createLink}
-                        </button>
-                      </div>
-                    </>
-                  )}
+                  <div className="share-head">
+                    <h3>{P.onlineTitle}</h3>
+                    {view && view.status !== 'ended' && (
+                      <p className={`sync-state ${view.status}`} title={view.status === 'offline' ? view.error : undefined}>
+                        {view.status === 'syncing' ? <I.Spinner size={12} /> : <span className="dot" />}
+                        {syncText(view)}
+                      </p>
+                    )}
+                  </div>
+                  {!view && <p className="hint">{P.onlineHint}</p>}
                   {view?.status === 'ended' && (
                     <>
                       <p className="hint">{P.ended}</p>
                       <div className="link-row">
-                        <button type="button" className="btn primary" disabled={publishing} onClick={() => void publish(project.id)}>
+                        <button type="button" className="btn primary" disabled={publishing || !author.trim()} onClick={() => void publish(project.id)}>
                           {P.reshare}
                         </button>
                         <button type="button" className="btn" onClick={() => void stop(project.id)}>
@@ -236,48 +240,56 @@ export function ProjectsPanel(props: {
                       </div>
                     </>
                   )}
-                  {view && view.status !== 'ended' && (
-                    <>
-                      <p className={`sync-state ${view.status}`} title={view.status === 'offline' ? view.error : undefined}>
-                        {view.status === 'syncing' ? <I.Spinner size={12} /> : <span className="dot" />}
-                        {syncText(view)}
-                      </p>
-                      <div className="link-field">
-                        <span className="label">{P.readLink}</span>
-                        <div className="link-row">
-                          <input className="field" readOnly value={view.read} aria-label={P.readLink} onFocus={(e) => e.target.select()} />
-                          <button type="button" className="btn" onClick={() => copy(view.read)}>
+                  {/* Une ligne par lien ; ce qu'il permet est dans l'info-bulle. */}
+                  <div className="share-rows">
+                    {view &&
+                      view.status !== 'ended' &&
+                      [
+                        { label: P.readLink, hint: P.readHint, url: view.read },
+                        { label: P.collabLink, hint: P.collabHint, url: view.collab },
+                      ].map((l) => (
+                        <div className="share-row" key={l.label} title={l.hint}>
+                          <span className="label">{l.label}</span>
+                          <input className="field link" readOnly value={l.url} aria-label={l.label} onFocus={(e) => e.target.select()} />
+                          <button type="button" className="btn" onClick={() => copy(l.url)}>
                             {P.copyLink}
                           </button>
                         </div>
-                        <small className="hint">{P.readHint}</small>
-                      </div>
-                      <div className="link-field">
-                        <span className="label">{P.collabLink}</span>
-                        <div className="link-row">
-                          <input className="field" readOnly value={view.collab} aria-label={P.collabLink} onFocus={(e) => e.target.select()} />
-                          <button type="button" className="btn" onClick={() => copy(view.collab)}>
-                            {P.copyLink}
-                          </button>
-                        </div>
-                        <small className="hint">{P.collabHint}</small>
-                      </div>
-                      <div className="link-row">
-                        <button type="button" className="btn danger" onClick={() => void stop(project.id)}>
-                          {view.owner ? P.stopLink : P.leave}
+                      ))}
+                    {/* Nom demandé la première fois qu'on partage ou qu'on rejoint un projet, puis gardé pour tous. */}
+                    <div className="share-row" title={P.yourNameHint}>
+                      <span className="label">{P.yourName}</span>
+                      <input
+                        className={`field ${author.trim() ? '' : 'required'}`}
+                        value={author}
+                        placeholder={P.yourNamePlaceholder}
+                        aria-label={P.yourName}
+                        maxLength={40}
+                        onChange={(e) => setAuthor(e.target.value)}
+                        onBlur={saveAuthor}
+                        onKeyDown={(e) => e.key === 'Enter' && e.currentTarget.blur()}
+                      />
+                      {!view && (
+                        <button type="button" className="btn primary" disabled={publishing || project.sessions.length === 0 || !author.trim()} onClick={() => void publish(project.id)}>
+                          {publishing && <I.Spinner size={13} />}
+                          {P.createLink}
                         </button>
-                      </div>
-                    </>
+                      )}
+                    </div>
+                  </div>
+                  {view && view.status !== 'ended' && (
+                    <div className="link-row">
+                      <button type="button" className="btn danger" onClick={() => void stop(project.id)}>
+                        {view.owner ? P.stopLink : P.leave}
+                      </button>
+                    </div>
                   )}
                 </section>
-                <section>
+                <section className="share-file">
                   <h3>{P.fileTitle}</h3>
-                  <p className="hint">{P.fileHint}</p>
-                  <div className="link-row">
-                    <button type="button" className="btn" onClick={() => void api.saveProjectFile(project.id).then((r) => show(r))}>
-                      {P.saveFile}
-                    </button>
-                  </div>
+                  <button type="button" className="btn" onClick={() => void api.saveProjectFile(project.id).then((r) => show(r))}>
+                    {P.saveFile}
+                  </button>
                 </section>
               </div>
             )}

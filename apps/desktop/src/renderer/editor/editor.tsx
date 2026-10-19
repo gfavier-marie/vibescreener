@@ -1,12 +1,12 @@
-// Éditeur d'annotations (§4.3) : en haut la session et l'export, au centre la capture,
-// à droite les points de la capture, en bas les vignettes de la session (masquables sur un document).
+// Éditeur d'annotations (§4.3) : en haut la session, les quatre modes (menu Nouveau), le partage et l'export,
+// au centre la capture, à droite les points de la capture, en bas les vignettes de la session (réductibles).
 
 import { useEffect, useRef, useState } from 'react';
 import { createRoot } from 'react-dom/client';
 import { allAnnotations, type Annotation, type DocumentPage, type Note, type Session } from '@pastille/shared';
 import { imageUrl, type ExportFormat, type MenuAction, type MenuState, type ProjectSummary, type SettingsState } from '../../ipc.ts';
 import * as I from '../icons.tsx';
-import { MenuItems } from '../menu/items.tsx';
+import { MenuItems, ModeItems } from '../menu/items.tsx';
 import { MODES, ModeTile, type ModeId } from '../modes.tsx';
 import { importNotice, ProjectsPanel, type Notice } from './Projects.tsx';
 import { T } from '../texts.ts';
@@ -99,6 +99,7 @@ function App() {
   const [renaming, setRenaming] = useState(false);
   const [exportMenu, setExportMenu] = useState(false);
   const [appMenu, setAppMenu] = useState<MenuState | null>(null); // menu ≡ ouvert : entrées du menu de l'icône
+  const [newMenu, setNewMenu] = useState<MenuState | null>(null); // menu Nouveau ouvert : les quatre modes
   // Panneau des projets ouvert : sur ce projet (sinon le projet en cours), avec un message (import) ou son partage déplié
   const [projectsOpen, setProjectsOpen] = useState<{ projectId?: string; notice?: Notice | null; share?: boolean; key: number } | null>(null);
   const openProjects = (projectId?: string, notice?: Notice | null, share = false) => setProjectsOpen({ projectId, notice, share, key: Date.now() });
@@ -113,7 +114,7 @@ function App() {
   const [tablet, setTablet] = useState(false);
   const [zoomed, setZoomed] = useState<string | null>(null); // croquis ou inspiration agrandi
   const [opening, setOpening] = useState<{ name: string; done: number; total: number } | null>(null); // document en cours d'ouverture
-  const [pagesHidden, setPagesHidden] = useState(false); // document : vignettes masquées, toute la place pour les pages
+  const [thumbsHidden, setThumbsHidden] = useState(false); // vignettes réduites : toute la place pour la capture
   const [newNoteId, setNewNoteId] = useState<string | null>(null); // remarque juste ajoutée, à mettre au focus
   const activeNote = useRef<string | null>(null); // remarque en cours de saisie
   const [commentMode, setCommentMode] = useState<SettingsState['commentMode']>('auto');
@@ -272,9 +273,10 @@ function App() {
     if (exportPdf) void runExport('pdf');
   }
 
-  /** Entrées du menu ≡ : celles qui touchent l'éditeur passent par ses fonctions (toast, sélection remise à zéro), les autres par le processus principal. */
+  /** Entrées des menus ≡ et Nouveau : celles qui touchent l'éditeur passent par ses fonctions (toast, sélection remise à zéro), les autres par le processus principal. */
   function menuAction(a: MenuAction) {
     setAppMenu(null);
+    setNewMenu(null);
     recorder.stop(true);
     if (a.type === 'export') void runExport('pdf');
     else if (a.type === 'sessions') openProjects();
@@ -309,6 +311,8 @@ function App() {
 
   // Projet de la revue ouverte, sinon celui où naîtra la prochaine revue.
   const project = projects.find((p) => p.id === session?.projectId) ?? projects.find((p) => p.current);
+  // Projet partagé : chaque point et remarque montre qui l'a ajouté.
+  const authorOf = (c: Note) => (project?.shared && c.author) || null;
   // Revue ouverte, ou rangée ailleurs : le nom du projet dans l'en-tête suit.
   useEffect(() => void api.listProjects().then(setProjects), [session?.id, session?.projectId]);
 
@@ -352,11 +356,12 @@ function App() {
   // Raccourcis (§4.6).
   useEffect(() => {
     const onKey = (e: KeyboardEvent) => {
-      if (sessionsOpen || appMenu) {
-        // Liste des sessions ou menu ≡ ouvert : seul Échap agit (le fermer).
+      if (sessionsOpen || appMenu || newMenu) {
+        // Projets ou menu ouvert : seul Échap agit (le fermer).
         if (e.key === 'Escape') {
           setProjectsOpen(null);
           setAppMenu(null);
+          setNewMenu(null);
         }
         return;
       }
@@ -458,7 +463,7 @@ function App() {
     };
   });
 
-  // Les quatre modes : boutons au bout des vignettes, cartes dans l'éditeur vide (comme sur le site).
+  // Les quatre modes : menu Nouveau de l'en-tête, cartes dans l'éditeur vide (comme sur le site).
   const startMode: Record<ModeId, () => void> = {
     capture: () => api.startCapture(),
     video: () => api.toggleVideo(),
@@ -466,34 +471,27 @@ function App() {
     tour: () => api.toggleTour(),
   };
   const modeKey = (id: ModeId) => (id === 'capture' ? shortcut : id === 'video' ? videoShortcut : null);
-  const modeButtons = MODES.map((id) => (
-    <button type="button" key={id} className="btn new-capture" title={T.modes[id].tagline} onClick={startMode[id]}>
-      <ModeTile id={id} size={13} />
-      {T.modes[id].name}
-      {modeKey(id) && <kbd>{modeKey(id)}</kbd>}
-    </button>
-  ));
 
   if (!session || !capture) {
     return (
       <div className={`empty ${isMac ? 'mac' : ''}`}>
         <I.Logo size={36} />
         <h1>{T.modes.title}</h1>
-        <p>{T.modes.intro}</p>
+        {/* Une carte par mode : son nom et une phrase ; le mode d'emploi est dans l'info-bulle. */}
         <div className="mode-cards">
           {MODES.map((id, i) => (
-            <button type="button" key={id} className={`mode-card mode-${id}`} onClick={startMode[id]}>
-              <span className="top">
-                <ModeTile id={id} size={20} />
-                {modeKey(id) && <kbd>{modeKey(id)}</kbd>}
-              </span>
-              <span className="name">
-                <span className="num">0{i + 1}</span>
-                {T.modes[id].name}
-              </span>
-              <span className="text">
-                <b>{T.modes[id].tagline}</b> {T.modes[id].text}
-              </span>
+            <button
+              type="button"
+              key={id}
+              className={`mode-card mode-${id}`}
+              style={{ '--i': i } as React.CSSProperties}
+              title={T.modes[id].text}
+              onClick={startMode[id]}
+            >
+              {modeKey(id) && <kbd>{modeKey(id)}</kbd>}
+              <ModeTile id={id} size={26} />
+              <span className="name">{T.modes[id].name}</span>
+              <span className="text">{T.modes[id].tagline}</span>
             </button>
           ))}
         </div>
@@ -693,6 +691,28 @@ function App() {
             {T.editor.opening(opening.name, opening.done, opening.total)}
           </span>
         )}
+        {/* Les quatre modes, lus à l'ouverture : pendant une vidéo ou un parcours, sa ligne l'arrête. */}
+        <div className="app-menu new-menu">
+          <button
+            type="button"
+            className="btn new"
+            aria-haspopup="menu"
+            aria-expanded={!!newMenu}
+            onClick={() => (newMenu ? setNewMenu(null) : void api.getMenuState().then(setNewMenu))}
+          >
+            <I.Plus size={14} />
+            {T.editor.newMenu}
+            <I.ChevronDown size={12} />
+          </button>
+          {newMenu && (
+            <>
+              <div className="menu-backdrop" onMouseDown={() => setNewMenu(null)} />
+              <div className="menu" role="menu" aria-label={T.editor.newMenu}>
+                <ModeItems s={newMenu} act={menuAction} />
+              </div>
+            </>
+          )}
+        </div>
         {/* Partager le projet de la revue : le panneau des projets s'ouvre sur son partage. */}
         <button type="button" className="btn share" onClick={() => openProjects(project?.id, null, true)}>
           <I.Share size={14} />
@@ -741,22 +761,6 @@ function App() {
             autoDictation(id);
           }}
           onMove={(id, geometry) => api.updateAnnotation(id, { geometry })}
-          tools={
-            doc && (
-              <>
-                <i />
-                <button
-                  type="button"
-                  aria-label={pagesHidden ? T.editor.showPages : T.editor.hidePages}
-                  title={pagesHidden ? T.editor.showPages : T.editor.hidePages}
-                  aria-pressed={pagesHidden}
-                  onClick={() => setPagesHidden((h) => !h)}
-                >
-                  <I.PanelBottom size={15} />
-                </button>
-              </>
-            )
-          }
           bubble={(pin, stage) => {
             if (!bubbleOpen || !selected) return null;
             // À droite de la pastille, ou à gauche si la place manque ; toujours dans la scène.
@@ -862,6 +866,7 @@ function App() {
                 {capture.annotations.map((a) => {
                   const r = recording(a);
                   const meta = [a.geometry.kind !== 'point' && kind(a), a.text && (a.input === 'typed' ? T.editor.typed : T.editor.dictated)].filter(Boolean);
+                  const showMeta = !r && a.transcription !== 'pending' && a.transcription !== 'error' && meta.length > 0;
                   return (
                     <article
                       key={a.id}
@@ -895,10 +900,15 @@ function App() {
                           <EditableText value={a.text} placeholder={T.editor.noComment} onChange={(text) => api.updateAnnotation(a.id, { text })} />
                         )}
                         {status(a, kind(a))}
-                        {!r && a.transcription !== 'pending' && a.transcription !== 'error' && meta.length > 0 && (
+                        {(showMeta || authorOf(a)) && (
                           <div className="meta">
-                            {a.input === 'typed' ? <I.Keyboard size={12} /> : <I.Mic size={12} />}
-                            {meta.join(' · ')}
+                            {authorOf(a) && <span className="author">{authorOf(a)}</span>}
+                            {showMeta && (
+                              <>
+                                {a.input === 'typed' ? <I.Keyboard size={12} /> : <I.Mic size={12} />}
+                                {meta.join(' · ')}
+                              </>
+                            )}
                           </div>
                         )}
                         {gallery(a, 'sketch')}
@@ -949,6 +959,7 @@ function App() {
                             />
                           )}
                           {status(n, T.editor.note)}
+                          {authorOf(n) && <span className="author">{authorOf(n)}</span>}
                         </div>
                         <div className="tools">
                           {commentMode !== 'keyboard' && (
@@ -995,35 +1006,50 @@ function App() {
         </aside>
       </main>
 
-      <nav aria-label={T.editor.captures} hidden={!!doc && pagesHidden}>
-        {captures.map((c, i) => (
-          <div className="shot" key={c.id}>
-            <button
-              type="button"
-              className="thumb"
-              aria-label={
-                c.source?.document
-                  ? T.editor.pageThumbLabel(docLabel(c.source.document), c.annotations.length, c.id === capture.id)
-                  : T.editor.thumbLabel(i + 1, c.annotations.length, c.id === capture.id)
-              }
-              aria-current={c.id === capture.id || undefined}
-              onClick={() => goTo(i)}
-            >
-              <span className="img">
-                <img src={imageUrl(session, c.image)} alt="" />
-              </span>
-              <span className="cap">
-                {c.source?.document
-                  ? T.editor.pageThumb(docLabel(c.source.document), c.annotations[0]?.number, c.annotations.at(-1)?.number)
-                  : T.editor.thumb(i + 1, c.annotations[0]?.number, c.annotations.at(-1)?.number)}
-              </span>
-            </button>
-            <button type="button" className="remove" aria-label={T.editor.deleteScreen(i + 1)} title={T.editor.deleteScreen(i + 1)} onClick={() => deleteCapture(i)}>
-              <I.Close size={9} />
-            </button>
+      <nav aria-label={T.editor.captures}>
+        {!thumbsHidden && (
+          <div className="shots">
+            {captures.map((c, i) => (
+              <div className="shot" key={c.id}>
+                <button
+                  type="button"
+                  className="thumb"
+                  aria-label={
+                    c.source?.document
+                      ? T.editor.pageThumbLabel(docLabel(c.source.document), c.annotations.length, c.id === capture.id)
+                      : T.editor.thumbLabel(i + 1, c.annotations.length, c.id === capture.id)
+                  }
+                  aria-current={c.id === capture.id || undefined}
+                  onClick={() => goTo(i)}
+                >
+                  <span className="img">
+                    <img src={imageUrl(session, c.image)} alt="" />
+                  </span>
+                  <span className="cap">
+                    {c.source?.document
+                      ? T.editor.pageThumb(docLabel(c.source.document), c.annotations[0]?.number, c.annotations.at(-1)?.number)
+                      : T.editor.thumb(i + 1, c.annotations[0]?.number, c.annotations.at(-1)?.number)}
+                  </span>
+                </button>
+                <button type="button" className="remove" aria-label={T.editor.deleteScreen(i + 1)} title={T.editor.deleteScreen(i + 1)} onClick={() => deleteCapture(i)}>
+                  <I.Close size={9} />
+                </button>
+              </div>
+            ))}
           </div>
-        ))}
-        {modeButtons}
+        )}
+        {/* Réduites, les vignettes laissent une barre fine : le nombre d'écrans et de quoi les rouvrir. */}
+        <button
+          type="button"
+          className={`fold ${thumbsHidden ? 'folded' : ''}`}
+          aria-expanded={!thumbsHidden}
+          aria-label={thumbsHidden ? T.editor.showThumbs : T.editor.hideThumbs}
+          title={thumbsHidden ? T.editor.showThumbs : T.editor.hideThumbs}
+          onClick={() => setThumbsHidden((h) => !h)}
+        >
+          {thumbsHidden && T.screens(captures.length)}
+          <I.ChevronDown size={14} />
+        </button>
       </nav>
 
       {exportMenu && <div style={{ position: 'fixed', inset: 0, zIndex: 9 }} onMouseDown={() => setExportMenu(false)} />}

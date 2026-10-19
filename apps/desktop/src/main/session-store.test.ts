@@ -51,6 +51,21 @@ describe('stockage des sessions', () => {
     expect(existsSync(file + '.tmp')).toBe(false);
   });
 
+  it('signe les points et remarques ajoutés du nom réglé, seulement s’il y en a un', async () => {
+    const root = await mkdtemp(join(tmpdir(), 'pastille-'));
+    let name = ' Paul ';
+    const store = createSessionStore(root, { author: () => name });
+    const capture = await store.addCapture(new Uint8Array([0]), meta);
+    const signed = store.addAnnotation(capture.id, { kind: 'point', x: 0.5, y: 0.5 });
+    const note = await store.addNote();
+    name = '';
+    const anonymous = store.addAnnotation(capture.id, { kind: 'point', x: 0.2, y: 0.2 });
+    const session = store.get()!;
+    expect(findAnnotation(session, signed)!.annotation.author).toBe('Paul');
+    expect(session.notes!.find((n) => n.id === note)!.author).toBe('Paul');
+    expect(findAnnotation(session, anonymous)!.annotation).not.toHaveProperty('author');
+  });
+
   it('une session prend le contexte de son projet, même modifié après coup', async () => {
     const root = await mkdtemp(join(tmpdir(), 'pastille-'));
     const store = createSessionStore(root, { legacyContext: () => 'Site vitrine' });

@@ -69,7 +69,6 @@ export function Stage(props: {
   onPage?: (pageId: string) => void; // le défilement a amené une autre page au milieu de l'écran
   // Bulle du point sélectionné : centre de sa pastille et taille de la scène, pour la placer.
   bubble: (pin: { x: number; y: number; r: number }, stage: { w: number; h: number }) => ReactNode;
-  tools?: ReactNode; // boutons ajoutés au bout de la barre d'aide
 }) {
   const { capture } = props;
   const pages = props.pages?.length ? props.pages : [capture];
@@ -384,7 +383,6 @@ export function Stage(props: {
         <button type="button" aria-label={T.editor.zoomIn} onClick={() => zoomAt(1.25, size.w / 2, size.h / 2)}>
           +
         </button>
-        {props.tools}
       </div>
     </div>
   );

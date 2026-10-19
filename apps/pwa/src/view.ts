@@ -165,7 +165,10 @@ async function showReview(summary: SharedSession) {
       el('p', { className: 'meta', text: `${index.project.name} · ${V.counts(points, session.captures.length)} · ${date(session.updatedAt)}` }),
     ];
     const notes = (session.notes ?? []).filter((n) => n.text.trim());
-    if (notes.length) parts.push(el('h3', { className: 'notes-title', text: V.notes }), el('ul', { className: 'notes' }, ...notes.map((n) => el('li', { text: n.text.trim() }))));
+    // Qui a écrit chaque remarque et chaque point (projet à plusieurs), quand l'app le sait.
+    const by = (author?: string) => (author ? [el('span', { className: 'author', text: author })] : []);
+    if (notes.length)
+      parts.push(el('h3', { className: 'notes-title', text: V.notes }), el('ul', { className: 'notes' }, ...notes.map((n) => el('li', { text: `${n.text.trim()} ` }, ...by(n.author)))));
 
     const screens: [HTMLCanvasElement, string, Annotation[]][] = [];
     for (const [i, c] of session.captures.entries()) {
@@ -190,7 +193,13 @@ async function showReview(summary: SharedSession) {
             'li',
             {},
             el('span', { className: `pin ${a.geometry.kind === 'point' ? '' : 'round'}`, text: String(a.number) }),
-            el('div', {}, el('p', { className: `comment ${a.text.trim() ? '' : 'empty'}`, text: a.text.trim() || T.noComment }), ...(extras.childElementCount ? [extras] : [])),
+            el(
+              'div',
+              {},
+              el('p', { className: `comment ${a.text.trim() ? '' : 'empty'}`, text: a.text.trim() || T.noComment }),
+              ...by(a.author),
+              ...(extras.childElementCount ? [extras] : []),
+            ),
           ),
         );
       }
