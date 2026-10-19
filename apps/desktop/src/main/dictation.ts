@@ -2,6 +2,7 @@
 // dans le dossier de session, le point (ou la remarque générale) passe à « pending », puis
 // le texte s'ajoute à la fin du commentaire quand Whisper a fini. La file survit à un redémarrage.
 
+import { existsSync } from 'node:fs';
 import { mkdir, readFile, writeFile } from 'node:fs/promises';
 import { join } from 'node:path';
 import { allAnnotations, findComment, type Session } from '@pastille/shared';
@@ -86,7 +87,9 @@ export function createDictation(store: SessionStore, transcribe: (wav: Uint8Arra
       const session = store.get();
       if (!session) return;
       for (const a of comments(session)) {
-        if (a.transcription === 'pending' && a.audio) queue.push({ sessionId: session.id, annotationId: a.id, audio: a.audio });
+        // Dictée faite sur un autre ordinateur (projet synchronisé) : son audio n'est pas ici, l'autre la transcrit.
+        if (a.transcription === 'pending' && a.audio && existsSync(join(store.dir(session), a.audio)))
+          queue.push({ sessionId: session.id, annotationId: a.id, audio: a.audio });
         if (a.transcription === 'recording') setState(a.id, { transcription: 'none' });
       }
       void pump();

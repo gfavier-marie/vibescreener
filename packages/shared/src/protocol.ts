@@ -1,4 +1,5 @@
-// Messages échangés entre le desktop et la tablette via le relais (cahier des charges §8.3).
+// Messages échangés via le relais entre le desktop et la tablette (cahier des charges §8.3), et entre les
+// ordinateurs d'un projet partagé.
 
 import { open, seal } from './crypto.ts';
 
@@ -16,7 +17,9 @@ export type Message =
   | { type: 'sketch_ack'; sketchId: string; number: number }
   // tablette → desktop
   // annotationId vide : joindre au dernier point créé
-  | { type: 'sketch'; annotationId: string; sketchId: string; png: string /* base64 */; strokes: string };
+  | { type: 'sketch'; annotationId: string; sketchId: string; png: string /* base64 */; strokes: string }
+  // projet partagé, entre ordinateurs : quelque chose a changé sur le relais, aller le chercher
+  | { type: 'sync' };
 
 const encoder = new TextEncoder();
 const decoder = new TextDecoder();

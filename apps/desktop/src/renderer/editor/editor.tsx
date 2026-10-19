@@ -697,6 +697,7 @@ function App() {
         <button type="button" className="btn share" onClick={() => openProjects(project?.id, null, true)}>
           <I.Share size={14} />
           {T.projects.share}
+          {project?.shared && <span className="dot" title={T.projects.sharedTag} />}
         </button>
         <div className="export">
           <button type="button" className="btn primary" aria-haspopup="menu" aria-expanded={exportMenu} onClick={() => setExportMenu((v) => !v)}>

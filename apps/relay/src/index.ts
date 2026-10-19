@@ -1,13 +1,13 @@
-// Relais : une « room » par appairage (Durable Object). Il retransmet les messages
-// binaires aux autres participants sans pouvoir les lire (chiffrés de bout en bout).
+// Relais : une « room » par appairage de tablette, et une par projet partagé (Durable Object). Il retransmet
+// les messages binaires aux autres participants sans pouvoir les lire (chiffrés de bout en bout).
 // Il garde aussi les projets partagés par lien (R2) : des objets chiffrés, dont la clé reste dans le lien.
 
 import { DurableObject } from 'cloudflare:workers';
 import { MAX_MESSAGE_BYTES } from '@pastille/shared/protocol';
 import { SHARE_ID, SHARE_NAME } from '@pastille/shared/share';
-import { share } from './share.ts';
+import { cleanup, share } from './share.ts';
 
-const MAX_PEERS = 4;
+const MAX_PEERS = 16; // tablette : l'ordinateur et une ou deux tablettes ; projet partagé : ses collaborateurs en ligne
 
 type Env = { ROOM: DurableObjectNamespace<Room>; ASSETS: Fetcher; SHARES: R2Bucket };
 
@@ -42,5 +42,9 @@ export default {
       return share(request, env.SHARES, id, name);
     }
     return env.ASSETS.fetch(request);
+  },
+  // Une fois par jour : partages restés trop longtemps sans modification effacés.
+  async scheduled(_event, env) {
+    await cleanup(env.SHARES);
   },
 } satisfies ExportedHandler<Env>;

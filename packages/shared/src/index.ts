@@ -3,6 +3,7 @@ export * from './crypto.ts';
 export * from './protocol.ts';
 export * from './link.ts';
 export * from './session.ts';
+export * from './merge.ts';
 export * from './lang.ts';
 export * from './render.ts';
 export * from './share.ts';

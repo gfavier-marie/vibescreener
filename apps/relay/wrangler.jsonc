@@ -1,7 +1,7 @@
 // Relais WebSocket + hébergement de la PWA (et de la visionneuse des projets partagés), en un seul Worker.
-// Projets partagés par lien : bucket R2 vibescreener-shares, dont une règle efface les objets après 30 jours, comme le
-// dit la page Confidentialité (wrangler r2 bucket create vibescreener-shares, puis
-// wrangler r2 bucket lifecycle add vibescreener-shares expire --expire-days 30 -y).
+// Projets partagés : bucket R2 vibescreener-shares (wrangler r2 bucket create vibescreener-shares). La tâche planifiée
+// efface chaque jour les partages restés 30 jours sans modification, comme le dit la page Confidentialité ; pas de
+// règle d'expiration sur le bucket, qui effacerait les images d'un projet encore actif.
 // Deux adresses, mêmes rooms : relay.vibescreener.dev (domaine provisoire) pour les nouvelles
 // versions, et pastille.vibescreener.workers.dev pour les apps et tablettes appairées avant :
 // ne jamais retirer workers_dev ni renommer le Worker.
@@ -21,5 +21,6 @@
     "bindings": [{ "name": "ROOM", "class_name": "Room" }]
   },
   "migrations": [{ "tag": "v1", "new_sqlite_classes": ["Room"] }],
-  "r2_buckets": [{ "binding": "SHARES", "bucket_name": "vibescreener-shares" }]
+  "r2_buckets": [{ "binding": "SHARES", "bucket_name": "vibescreener-shares" }],
+  "triggers": { "crons": ["30 3 * * *"] }
 }

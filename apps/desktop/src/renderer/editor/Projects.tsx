@@ -1,9 +1,9 @@
 // Projets, par-dessus l'éditeur : la liste des projets à gauche (nouveau, importer) ; à droite le projet
 // choisi, son contexte, ses revues (ouvrir, exporter le PDF, ranger ailleurs, corbeille) et son partage :
-// lien de lecture ou fichier projet.
+// en ligne (synchronisé ; lien de lecture et lien de collaboration) ou par fichier projet.
 
 import { useEffect, useRef, useState } from 'react';
-import type { ProjectSummary, ShareLink } from '../../ipc.ts';
+import type { ProjectSummary, ShareView } from '../../ipc.ts';
 import * as I from '../icons.tsx';
 import { T } from '../texts.ts';
 
@@ -33,8 +33,8 @@ export function ProjectsPanel(props: {
   const [importing, setImporting] = useState(false);
   const [linkText, setLinkText] = useState('');
   const [shareOpen, setShareOpen] = useState(!!props.initialShare);
-  const [link, setLink] = useState<ShareLink | undefined>();
-  const [sending, setSending] = useState<{ done: number; total: number } | null>(null);
+  const [view, setView] = useState<ShareView | undefined>(); // partage en ligne du projet choisi
+  const [publishing, setPublishing] = useState(false);
   const [notice, setNotice] = useState<Notice | null>(props.initialNotice ?? null);
   // Contexte en cours de saisie : enregistré à la sortie du champ, ou à la fermeture du panneau (clic à côté, Échap).
   const typedContext = useRef<{ id: string; text: string } | null>(null);
@@ -51,11 +51,14 @@ export function ProjectsPanel(props: {
     setRenaming(false);
     setShareOpen(false);
   };
+  // État du partage, suivi en direct (envoi, synchronisation, hors ligne)
   useEffect(() => {
-    setLink(undefined);
-    if (project) void api.shareLink(project.id).then(setLink);
+    setView(undefined);
+    if (!project) return;
+    const load = () => void api.shareLink(project.id).then(setView);
+    load();
+    return api.onShareStatus((id) => id === project.id && load());
   }, [project?.id]);
-  useEffect(() => api.onShareProgress((p) => setSending(p && p.projectId === project?.id ? p : null)), [project?.id]);
 
   const show = (r: { ok: true } | { ok: false; error: string } | null, text?: string) => r && setNotice(r.ok ? (text ? { text } : null) : { text: r.error, error: true });
 
@@ -76,16 +79,26 @@ export function ProjectsPanel(props: {
 
   async function publish(id: string) {
     setNotice(null);
+    setPublishing(true);
     const r = await api.publishLink(id);
-    if (r.ok) setLink(r.link);
-    show(r, P.copied);
-  }
-
-  async function revoke(id: string) {
-    const r = await api.revokeLink(id);
-    if (r.ok) setLink(undefined);
+    setPublishing(false);
+    if (r.ok) setView(r.view);
     show(r);
   }
+
+  async function stop(id: string) {
+    const r = await api.revokeLink(id);
+    if (r?.ok) setView(undefined);
+    show(r);
+  }
+
+  const copy = (text: string) => {
+    api.copyText(text);
+    setNotice({ text: P.copied });
+  };
+
+  const syncText = (v: ShareView) =>
+    v.progress ? P.sending(v.progress.done, v.progress.total) : v.status === 'syncing' ? P.syncing : v.status === 'offline' ? P.offline : P.synced;
 
   return (
     <div className="sessions-backdrop" onMouseDown={(e) => e.target === e.currentTarget && props.onClose()}>
@@ -99,6 +112,7 @@ export function ProjectsPanel(props: {
                   <span className="title">{p.name}</span>
                   <span className="meta">
                     {P.reviews(p.sessions.length)}
+                    {p.shared && ` · ${P.sharedTag}`}
                     {p.current && ` · ${P.current}`}
                   </span>
                 </button>
@@ -197,35 +211,64 @@ export function ProjectsPanel(props: {
             {shareOpen && (
               <div className="share">
                 <section>
-                  <h3>{P.linkTitle}</h3>
-                  <p className="hint">{P.linkHint}</p>
-                  {link && (
-                    <div className="link-row">
-                      <input className="field" readOnly value={link.url} aria-label={P.linkTitle} onFocus={(e) => e.target.select()} />
-                      <button type="button" className="btn" onClick={() => api.copyText(link.url)}>
-                        {P.copyLink}
-                      </button>
-                    </div>
-                  )}
-                  <div className="link-row">
-                    {sending ? (
-                      <span className="meta">
-                        <I.Spinner size={13} /> {P.sending(sending.done, sending.total)}
-                      </span>
-                    ) : (
-                      <>
-                        {link && <span className="meta">{P.linkState(link.sharedAt, link.expiresAt)}</span>}
-                        <button type="button" className="btn primary" disabled={project.sessions.length === 0} onClick={() => void publish(project.id)}>
-                          {link ? P.updateLink : P.createLink}
+                  <h3>{P.onlineTitle}</h3>
+                  {!view && (
+                    <>
+                      <p className="hint">{P.onlineHint}</p>
+                      <div className="link-row">
+                        <button type="button" className="btn primary" disabled={publishing || project.sessions.length === 0} onClick={() => void publish(project.id)}>
+                          {publishing && <I.Spinner size={13} />}
+                          {P.createLink}
                         </button>
-                        {link && (
-                          <button type="button" className="btn danger" onClick={() => void revoke(project.id)}>
-                            {P.stopLink}
+                      </div>
+                    </>
+                  )}
+                  {view?.status === 'ended' && (
+                    <>
+                      <p className="hint">{P.ended}</p>
+                      <div className="link-row">
+                        <button type="button" className="btn primary" disabled={publishing} onClick={() => void publish(project.id)}>
+                          {P.reshare}
+                        </button>
+                        <button type="button" className="btn" onClick={() => void stop(project.id)}>
+                          {P.leave}
+                        </button>
+                      </div>
+                    </>
+                  )}
+                  {view && view.status !== 'ended' && (
+                    <>
+                      <p className={`sync-state ${view.status}`} title={view.status === 'offline' ? view.error : undefined}>
+                        {view.status === 'syncing' ? <I.Spinner size={12} /> : <span className="dot" />}
+                        {syncText(view)}
+                      </p>
+                      <div className="link-field">
+                        <span className="label">{P.readLink}</span>
+                        <div className="link-row">
+                          <input className="field" readOnly value={view.read} aria-label={P.readLink} onFocus={(e) => e.target.select()} />
+                          <button type="button" className="btn" onClick={() => copy(view.read)}>
+                            {P.copyLink}
                           </button>
-                        )}
-                      </>
-                    )}
-                  </div>
+                        </div>
+                        <small className="hint">{P.readHint}</small>
+                      </div>
+                      <div className="link-field">
+                        <span className="label">{P.collabLink}</span>
+                        <div className="link-row">
+                          <input className="field" readOnly value={view.collab} aria-label={P.collabLink} onFocus={(e) => e.target.select()} />
+                          <button type="button" className="btn" onClick={() => copy(view.collab)}>
+                            {P.copyLink}
+                          </button>
+                        </div>
+                        <small className="hint">{P.collabHint}</small>
+                      </div>
+                      <div className="link-row">
+                        <button type="button" className="btn danger" onClick={() => void stop(project.id)}>
+                          {view.owner ? P.stopLink : P.leave}
+                        </button>
+                      </div>
+                    </>
+                  )}
                 </section>
                 <section>
                   <h3>{P.fileTitle}</h3>

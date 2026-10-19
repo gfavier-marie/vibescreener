@@ -1,9 +1,11 @@
-// Visionneuse d'un projet partagé par lien (lecture seule) : l'index puis chaque revue, chiffrés, arrivent
-// du relais et sont déchiffrés ici avec la clé du fragment (#s=…&k=…), que le serveur ne voit jamais.
+// Visionneuse d'un projet partagé en ligne (lecture seule) : l'index, chaque revue et ses images, chiffrés,
+// arrivent du relais et sont déchiffrés ici avec la clé du fragment (#s=…&k=…), que le serveur ne voit jamais.
+// Format 2 : une revue = son session.json, chaque fichier à part ; format 1 (0.16) : une revue = un zip.
 
 import JSZip from 'jszip';
 import {
   drawAnnotations,
+  fileObjectName,
   importKey,
   isSkippedPage,
   open,
@@ -134,14 +136,23 @@ function figure(url: string, caption: string) {
   return el('figure', {}, a, el('figcaption', { text: caption }));
 }
 
-async function showReview(summary: SharedSession) {
-  status(V.loadingReview);
-  try {
-    const zip = await JSZip.loadAsync(await get(summary.id));
-    const file = async (path: string) => {
+/** Fichiers d'une revue : session.json, puis chaque image à la demande. */
+async function reviewFiles(id: string): Promise<(path: string) => Promise<Uint8Array<ArrayBuffer> | undefined>> {
+  if (index.format === 1) {
+    const zip = await JSZip.loadAsync(await get(id));
+    return async (path) => {
       const entry = zip.file(path);
       return entry ? new Uint8Array(await entry.async('uint8array')) : undefined;
     };
+  }
+  const doc = await get(id);
+  return async (path) => (path === 'session.json' ? doc : get(await fileObjectName(id, path)).catch(() => undefined));
+}
+
+async function showReview(summary: SharedSession) {
+  status(V.loadingReview);
+  try {
+    const file = await reviewFiles(summary.id);
     const session = upgradeSession(JSON.parse(decoder.decode((await file('session.json')) ?? new Uint8Array())) as Session);
     for (const url of urls.splice(0)) URL.revokeObjectURL(url);
 

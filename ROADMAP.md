@@ -567,3 +567,18 @@ Choix du 19 oct. : **les deux** façons de partager, le fichier d'abord (il sert
 - [x] Déploiement (19 oct.) : bucket R2 `vibescreener-shares` et sa règle d'expiration (commandes dans `apps/relay/wrangler.jsonc`), relais, site, version **0.16.0**
 - [x] Bouton **Partager** à côté d'Exporter dans l'en-tête de l'éditeur : il ouvre le partage du projet de la revue (le panneau Projets seul, derrière le nom du projet en gris, ne se trouvait pas : retour d'essai sous Windows) ; version **0.16.1**
 - [ ] Essai réel dans l'app (avec ton accord) : panneau Projets, partage par lien et par fichier entre deux ordinateurs (ou deux comptes), double-clic sur un `.vibescreener` (Mac, puis Windows)
+
+## Projet partagé synchronisé (demandé le 19 oct. 2026)
+
+« Les modifs faites sur un projet partagé sont visibles par tout le monde. » Partager en ligne = synchroniser : chaque modification part toute seule, les autres la reçoivent en quelques secondes. Spécification : SPEC §4.12.
+
+- [x] Fusion point par point (`packages/shared/src/merge.ts`) : écrans, points, croquis, inspirations, remarques réunis par id ; même point → version la plus récente ; suppressions mémorisées (`Session.deleted`) ; résultat identique des deux côtés (sinon les copies se renverraient sans fin). 5 tests
+- [x] Relais : écriture conditionnelle (If-Match, If-None-Match: *) et ETag ; un partage vit tant que son index a moins de 30 jours, tâche quotidienne qui efface les partages inactifs (plus de règle d'expiration sur le bucket : elle effacerait les images d'un projet actif) ; rooms jusqu'à 16 ordinateurs. 5 tests
+- [x] Moteur `sync.ts` : une revue = son session.json, chaque fichier envoyé une fois ; envoi 3 s après la dernière modification ; room du projet pour prévenir les autres ; fusion puis nouvel essai si la revue a changé en ligne ; revues ajoutées, retirées, projet renommé ; la revue ouverte garde son annulation ; partages de la 0.16 passés au nouveau format ; arrêter (créateur) ou quitter. 6 tests à deux ordinateurs
+- [x] Panneau : « Partager en ligne », état (synchronisé, envoi, hors ligne, terminé), lien de lecture et lien de collaboration ; « partagé » dans la liste ; point vert sur le bouton Partager de l'en-tête ; cinq langues
+- [x] Visionneuse : nouveau format (revue puis images à la demande), liens 0.16 toujours lisibles
+- [x] Essai sur le relais local (wrangler, vraies rooms) : une modification de A arrive chez B en ~3,4 s sans rien déclencher, et l'inverse sur une revue ouverte
+- [x] Page Confidentialité (cinq langues)
+- [ ] Déploiement : retirer la règle d'expiration du bucket (`wrangler r2 bucket lifecycle remove vibescreener-shares expire`), `pnpm relay:deploy` (tâche planifiée), `pnpm site:deploy`, version **0.17.0**
+- [ ] Essai réel entre ton Mac et ton PC Windows
+

@@ -23,7 +23,7 @@ import {
   shell,
   systemPreferences,
 } from 'electron';
-import { allAnnotations, findAnnotation, findComment, isDocumentSession, isLang, isSkippedPage, pickLang, slugify, SHARE_EXT, type Geometry, type Session } from '@pastille/shared';
+import { allAnnotations, findAnnotation, findComment, isDocumentSession, markDeleted, isLang, isSkippedPage, parseShareUrl, pickLang, slugify, SHARE_EXT, type Geometry, type Session } from '@pastille/shared';
 import type { CaptureResult, EditorFocus, ExportFormat, ExportResult, MenuAction, MenuState, PairingState, SettingsState, SettingsTab, TourRegion, VideoFeedback } from '../ipc.ts';
 import { createCapture, followWindow, listWindows, windowTarget, type CapturedImage, type ChosenWindow } from './capture.ts';
 import { createClicks } from './clicks.ts';
@@ -40,6 +40,7 @@ import { createSampleDocx, createSamplePdf, createSamplePptx, createSampleXlsx }
 import { createMcp, MCP_PORT } from './mcp.ts';
 import { createSessionStore } from './session-store.ts';
 import { createSharing, ShareError, type ImportReport } from './share.ts';
+import { createSync, readLink } from './sync.ts';
 import { createTablet } from './tablet.ts';
 import QRCode from 'qrcode';
 import { encodeWav, wavDurationMs } from './wav.ts';
@@ -113,15 +114,29 @@ const store = createSessionStore(app.getPath('userData'), {
     editor?.webContents.send('session:changed', s);
     updateTrayMenu();
     tablet?.refresh();
+    if (s) sync.changed(store.projectOf(s)?.id); // projet partagé : la modification part quelques secondes après
   },
   onProjects: () => {
     editor?.webContents.send('projects:changed');
     updateTrayMenu();
+    void sync.changedAll();
   },
   legacyContext: () => settings.get().context, // contexte réglé avant les projets, donné au premier projet
 });
-// Partage des projets : fichier .vibescreener, ou lien de lecture déposé (chiffré) sur le même relais que la tablette.
-const sharing = createSharing({ store, dataDir: app.getPath('userData'), relay: RELAY_URL, fetch: (url, init) => net.fetch(url, init) });
+// Partage des projets : fichier .vibescreener, ou en ligne, synchronisé (chiffré) par le même relais que la tablette.
+const sharing = createSharing({ store });
+const relayFetch = (url: string, init: RequestInit) => net.fetch(url, init);
+const sync = createSync({
+  store,
+  dataDir: app.getPath('userData'),
+  relay: RELAY_URL,
+  fetch: relayFetch,
+  trash: (dir) => shell.trashItem(dir),
+  onStatus: (projectId) => {
+    editor?.webContents.send('share:status', projectId);
+    editor?.webContents.send('projects:changed');
+  },
+});
 const tablet = autotest && autotest !== 'tablet'
   ? null
   : createTablet({
@@ -1286,6 +1301,7 @@ ipcMain.on('annotation:delete', (_e, id: string) =>
   store.update(
     (s) => {
       for (const c of s.captures) c.annotations = c.annotations.filter((a) => a.id !== id);
+      markDeleted(s, id); // une copie synchronisée ne le fait pas revenir
     },
     { undoable: true },
   ),
@@ -1296,10 +1312,16 @@ ipcMain.on('session:update', (_e, patch: Pick<Session, 'name'>) =>
 );
 // Écran supprimé avec ses points ; son image reste sur le disque pour que ⌘Z le fasse revenir.
 ipcMain.on('capture:delete', (_e, id: string) =>
-  store.update((s) => (s.captures = s.captures.filter((c) => c.id !== id)), { undoable: true }),
+  store.update(
+    (s) => {
+      s.captures = s.captures.filter((c) => c.id !== id);
+      markDeleted(s, id);
+    },
+    { undoable: true },
+  ),
 );
 // Projets et leurs revues (éditeur) : ouvrir, ranger, mettre à la corbeille après confirmation, partager.
-ipcMain.handle('projects:list', () => store.listProjects());
+ipcMain.handle('projects:list', async () => (await store.listProjects()).map((p) => ({ ...p, shared: sync.isShared(p.id) })));
 ipcMain.handle('session:open', (_e, id: string) => store.open(id));
 ipcMain.handle('session:move', (_e, id: string, projectId: string) => store.moveSession(id, projectId));
 ipcMain.handle('project:create', async (_e, name: string) => (await store.createProject(name)).id);
@@ -1321,7 +1343,7 @@ ipcMain.handle('project:trash', async (_e, id: string) => {
     cancelId: 1,
   });
   if (response !== 0) return false;
-  await sharing.revoke(id).catch(() => {}); // lien arrêté si le relais répond, sinon il expire seul
+  await sync.forget(id); // créé ici : partage arrêté pour tous ; rejoint : quitté
   const open = store.get();
   if (open && store.projectOf(open)?.id === id) await store.close();
   const failed: string[] = [];
@@ -1336,7 +1358,14 @@ const shareError = (err: unknown) => ({ ok: false as const, error: err instanceo
 /** Projet partagé à importer : fichier .vibescreener, ou lien de lecture collé. */
 async function importProject(source: string): Promise<{ ok: true; report: ImportReport } | { ok: false; error: string }> {
   try {
-    const report = /^https?:\/\//i.test(source.trim()) ? await sharing.importLink(source) : await sharing.importFile(source);
+    const isLink = /^https?:\/\//i.test(source.trim());
+    const link = isLink ? parseShareUrl(source) : null;
+    if (isLink && !link) throw new ShareError(T.share.notALink);
+    const report = !link
+      ? await sharing.importFile(source)
+      : link.token
+        ? await sync.join(source) // lien de collaboration : le projet reste synchronisé
+        : await sharing.importSource(await readLink(source, relayFetch)); // lien de lecture : une copie
     return { ok: true, report };
   } catch (err) {
     return shareError(err);
@@ -1368,22 +1397,32 @@ ipcMain.handle('project:save-file', async (_e, id: string) => {
     return shareError(err);
   }
 });
-ipcMain.handle('share:link', (_e, id: string) => sharing.link(id));
-// Lien de lecture créé ou mis à jour, puis copié ; l'avancement de l'envoi est montré dans le panneau.
-ipcMain.handle('share:publish', async (e, id: string) => {
+ipcMain.handle('share:link', (_e, id: string) => sync.view(id));
+// Partage en ligne : tout est envoyé, puis le projet reste synchronisé ; l'avancement passe par share:status.
+ipcMain.handle('share:publish', async (_e, id: string) => {
   try {
-    const link = await sharing.publish(id, (done, total) => e.sender.send('share:progress', { projectId: id, done, total }));
-    clipboard.writeText(link.url);
-    return { ok: true as const, link };
+    return { ok: true as const, view: await sync.create(id) };
   } catch (err) {
     return shareError(err);
-  } finally {
-    e.sender.send('share:progress', null);
   }
 });
+// Créateur : partage arrêté pour tous, après confirmation. Sinon : on le quitte, la copie reste.
 ipcMain.handle('share:revoke', async (_e, id: string) => {
+  const view = await sync.view(id);
+  const project = (await store.projects()).find((p) => p.id === id);
+  if (view?.owner && view.status !== 'ended') {
+    const { response } = await dialog.showMessageBox({
+      type: 'warning',
+      message: T.main.stopShare(project?.name ?? ''),
+      detail: T.main.stopShareDetail,
+      buttons: [T.main.stopShareConfirm, T.main.cancel],
+      defaultId: 1,
+      cancelId: 1,
+    });
+    if (response !== 0) return null;
+  }
   try {
-    await sharing.revoke(id);
+    await sync.stop(id);
     return { ok: true as const };
   } catch (err) {
     return shareError(err);
@@ -1407,6 +1446,7 @@ ipcMain.handle('session:trash', async (_e, id: string) => {
   await shell.trashItem(dir).catch((err) => dialog.showMessageBox({ type: 'warning', message: T.main.trashFailed(String(err)) }));
   editor?.webContents.send('projects:changed');
   updateTrayMenu();
+  void sync.changedAll(); // projet partagé : la revue est retirée chez les autres
   return true;
 });
 // Remarques générales : une liste, chaque remarque tapée ou dictée comme un commentaire de point.
@@ -1420,12 +1460,21 @@ ipcMain.on('note:update', (_e, id: string, text: string) =>
     { undoable: true, coalesceKey: `text:${id}` },
   ),
 );
-ipcMain.on('note:delete', (_e, id: string) => store.update((s) => (s.notes = s.notes?.filter((n) => n.id !== id)), { undoable: true }));
+ipcMain.on('note:delete', (_e, id: string) =>
+  store.update(
+    (s) => {
+      s.notes = s.notes?.filter((n) => n.id !== id);
+      markDeleted(s, id);
+    },
+    { undoable: true },
+  ),
+);
 ipcMain.on('sketch:delete', (_e, annotationId: string, sketchId: string) =>
   store.update(
     (s) => {
       const a = findAnnotation(s, annotationId)?.annotation;
       if (a) a.sketches = a.sketches.filter((k) => k.id !== sketchId);
+      markDeleted(s, sketchId);
     },
     { undoable: true },
   ),
@@ -1444,6 +1493,7 @@ ipcMain.on('inspiration:delete', (_e, annotationId: string, inspirationId: strin
     (s) => {
       const a = findAnnotation(s, annotationId)?.annotation;
       if (a) a.inspirations = a.inspirations?.filter((k) => k.id !== inspirationId);
+      markDeleted(s, inspirationId);
     },
     { undoable: true },
   ),
@@ -1737,6 +1787,7 @@ app.on('will-quit', () => {
   tablet?.stop();
   transcriber.stop();
   mcp.close();
+  sync.close();
 });
 
 void app.whenReady().then(async () => {
@@ -1767,6 +1818,7 @@ void app.whenReady().then(async () => {
   if (isMac) console.log('Enregistrement de l’écran :', systemPreferences.getMediaAccessStatus('screen'));
 
   await store.restore();
+  if (!autotest) void sync.start(); // projets partagés : rattrapage, puis synchronisation au fil des modifications
   capture = createCapture({
     preload,
     loadPage,

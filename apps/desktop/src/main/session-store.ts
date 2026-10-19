@@ -8,6 +8,7 @@ import { join } from 'node:path';
 import {
   allAnnotations,
   findAnnotation,
+  markDeleted,
   newNote,
   newProject,
   newSession,
@@ -42,7 +43,7 @@ type State = { currentSessionId?: string; currentProjectId?: string };
 export type SessionSummary = { id: string; name: string; projectId: string; points: number; screens: number; updatedAt: string };
 
 /** Un projet et ses revues, la plus récente d'abord ; `updatedAt` : dernière activité ; `current` : la prochaine revue y naîtra. */
-export type ProjectSummary = Project & { sessions: SessionSummary[]; current: boolean };
+export type ProjectSummary = Project & { sessions: SessionSummary[]; current: boolean; shared?: boolean };
 
 export type SessionStore = ReturnType<typeof createSessionStore>;
 
@@ -302,6 +303,7 @@ export function createSessionStore(
     update(
       (s) => {
         for (const c of s.captures) c.annotations = c.annotations.filter((a) => a.id !== annotationId);
+        markDeleted(s, annotationId);
         renumber(s);
       },
       { patchHistory: true },

@@ -4,9 +4,10 @@ import type { Geometry, Session } from '@pastille/shared';
 import type { LicenseView } from './main/license.ts';
 import type { ProjectSummary, SessionSummary } from './main/session-store.ts';
 import type { Settings, SettingsView } from './main/settings.ts';
-import type { ImportReport, ShareLink } from './main/share.ts';
+import type { ImportReport } from './main/share.ts';
+import type { ShareView } from './main/sync.ts';
 
-export type { ImportReport, LicenseView, ProjectSummary, SessionSummary, Settings, ShareLink };
+export type { ImportReport, LicenseView, ProjectSummary, SessionSummary, Settings, ShareView };
 
 /** Écran figé, et de quoi annoncer la capture : session, numéro d'écran, numéro du prochain point. */
 export type OverlayShow = {
@@ -186,10 +187,10 @@ export type PastilleApi = {
   trashProject(id: string): Promise<boolean>; // après confirmation ; faux si annulé
   importProject(source?: File | string): Promise<ShareResult<{ report: ImportReport }> | null>; // fichier, lien collé ; rien : dialogue (null si annulé)
   saveProjectFile(id: string): Promise<ShareResult<{ path: string }> | null>;
-  shareLink(id: string): Promise<ShareLink | undefined>;
-  publishLink(id: string): Promise<ShareResult<{ link: ShareLink }>>; // crée ou met à jour le lien, puis le copie
-  revokeLink(id: string): Promise<ShareResult<object>>;
-  onShareProgress(cb: (p: { projectId: string; done: number; total: number } | null) => void): () => void;
+  shareLink(id: string): Promise<ShareView | undefined>; // partage en ligne du projet, s'il existe
+  publishLink(id: string): Promise<ShareResult<{ view: ShareView }>>; // partage en ligne, synchronisé ensuite
+  revokeLink(id: string): Promise<ShareResult<object> | null>; // arrêter (créateur, après confirmation ; null si annulé) ou quitter
+  onShareStatus(cb: (projectId: string) => void): () => void; // état d'un partage changé (synchronisation, envoi)
   addNote(): Promise<string>;
   updateNote(id: string, text: string): void;
   deleteNote(id: string): void;

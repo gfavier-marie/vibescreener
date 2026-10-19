@@ -15,6 +15,7 @@ export type Session = {
   projectId?: string; // absent avant les projets : rangée dans le premier projet
   context?: string; // copie du contexte du projet
   notes?: Note[]; // remarques générales, rattachées à aucun point
+  deleted?: string[]; // ids supprimés (écrans, points, croquis, inspirations, remarques) : une copie synchronisée ne les fait pas revenir
   createdAt: string;
   updatedAt: string;
   captures: Capture[];

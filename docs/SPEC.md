@@ -220,15 +220,17 @@ Un projet regroupe plusieurs revues ; il se partage avec d'autres personnes.
 - **Panneau Projets** (nom du projet dans l'en-tête de l'éditeur, « Projets… » dans les menus) :
   - à gauche : les projets, Nouveau projet, Importer… ;
   - à droite, pour le projet choisi : nom (renommable), contexte, revues (ouvrir, exporter le PDF, ranger dans un autre projet, corbeille), Nouvelle revue, Partager, corbeille du projet (ses revues comprises, son lien arrêté).
-- **Lien de lecture** :
-  - chaque revue, puis l'index du projet, est chiffrée sur l'ordinateur (AES-GCM) et déposée sur le relais (R2) ; la clé est dans le fragment du lien (`/view#s=<id>&k=<clé>`), jamais envoyée au serveur ;
-  - le destinataire voit le projet et ses écrans annotés dans son navigateur, sans l'app (visionneuse servie par le relais) ;
-  - « Mettre à jour » renvoie tout au même lien ; « Arrêter le partage » l'efface ; un lien vit 30 jours après son dernier envoi ;
-  - une revue de plus de 90 Mo chiffrée ne passe pas par un lien : le fichier projet s'impose ;
-  - le jeton qui permet de mettre à jour ou d'arrêter le lien reste sur l'ordinateur (`shares.json`).
+- **Partage en ligne, synchronisé** (demandé le 19 oct. 2026 : « les modifs faites sur un projet partagé sont visibles par tout le monde ») :
+  - « Partager en ligne » envoie le projet, chiffré sur l'ordinateur (AES-GCM), au relais (R2) : l'index (projet, revues, revues retirées), chaque revue (son `session.json`) et chaque fichier à part (image, croquis, document), envoyé une seule fois ;
+  - deux liens, la clé dans le fragment, jamais envoyée au serveur : **lecture** (`/view#s=…&k=…`, la visionneuse servie par le relais, sans l'app) et **collaboration** (`…&t=<jeton>`, collé dans Importer… pour rejoindre le projet et le modifier) ;
+  - ensuite, chaque modification part 3 s après la dernière frappe ; le relais prévient les autres ordinateurs par la room du projet (comme la tablette), qui vont la chercher ; un ordinateur hors ligne rattrape tout à son retour (et un passage toutes les 5 min sert de filet) ;
+  - une revue modifiée des deux côtés est fusionnée **point par point** : écrans, points, croquis, inspirations et remarques réunis ; un même point garde sa version la plus récente ; une suppression est mémorisée (`deleted`) et se propage ; l'écriture conditionnelle du relais (If-Match) empêche qu'une version en écrase une autre ;
+  - revues ajoutées, retirées (corbeille, rangées ailleurs), projet renommé ou contexte changé : visibles partout ;
+  - le créateur peut « Arrêter le partage » (effacé du relais pour tous, chacun garde sa copie) ; un collaborateur « Quitte le partage » ;
+  - un partage resté 30 jours sans modification est effacé par une tâche quotidienne du relais ; un fichier de plus de 90 Mo chiffré ne passe pas ;
+  - pas de comptes : quiconque a le lien de collaboration peut tout modifier ; les dictées sont transcrites par l'ordinateur qui les a enregistrées (l'audio ne part pas).
 - **Fichier projet** (`.vibescreener`, un zip) : le projet et ses revues (captures, textes des pages, documents, croquis, inspirations, dictées non transcrites), à envoyer par e-mail ou messagerie. Il s'importe par Importer…, en le déposant sur l'éditeur ou d'un double-clic.
-- **Import** (fichier, ou lien collé dans Importer…) : le projet est ajouté, ou complété s'il existe ; pour chaque revue, la version la plus récente est gardée (« ajoutée », « mise à jour », « déjà à jour », « gardée, plus récente ici »). Une dictée restée en attente chez l'autre arrive en erreur, à réessayer.
-- Pas de compte ni de modification à plusieurs en même temps : on travaille chacun sur sa copie, et l'import fusionne revue par revue.
+- **Import** (fichier, ou lien de lecture collé dans Importer…) : une copie ; le projet est ajouté, ou complété s'il existe ; pour chaque revue, la version la plus récente est gardée (« ajoutée », « mise à jour », « déjà à jour », « gardée, plus récente ici »). Une dictée restée en attente chez l'autre arrive en erreur, à réessayer.
 
 ## 5. PWA de croquis
 
@@ -343,7 +345,7 @@ Tout est stocké en local, en fichiers lisibles, un dossier par session ; seuls 
 
 ```text
 <dossier données de l'app>/projects.json   projets (id, nom, contexte)
-<dossier données de l'app>/shares.json     liens de partage créés ici (id, clé, jeton)
+<dossier données de l'app>/shares.json     projets partagés en ligne (id, clé, jeton, versions échangées)
 <dossier données de l'app>/sessions/<sessionId>/
   session.json                 état complet de la session
   captures/<captureId>.png     captures en pleine résolution
@@ -366,6 +368,7 @@ type Project = { id: string; name: string; context?: string; createdAt: string; 
 type Session = {
   id: string; name: string;
   projectId?: string;            // absent avant les projets : rangée dans le premier
+  deleted?: string[];            // ids supprimés : une copie synchronisée ne les fait pas revenir
   context?: string;              // ancien contexte ; celui du projet l'emporte
   createdAt: string; updatedAt: string;
   captures: Capture[];
@@ -498,7 +501,7 @@ La transcription est tranchée : Whisper en local. Les trois autres choix struct
 - Quelle tablette : iPad avec Apple Pencil, Android, ou les deux ? Cela oriente la gestion de la pression et du rejet de paume.
 - Faut-il un usage sans internet (train, réseau d'entreprise qui filtre les WebSockets) ? Si oui, le mode Wi-Fi local passe en V1.
 
-**Hors périmètre V1** : comptes et collaboration en temps réel (le partage de projets, §4.12, se fait par lien de lecture ou par fichier), Linux, annotation de vidéo (ajoutée ensuite sous forme de mode vidéo sans fichier vidéo, voir `ROADMAP.md`), retouche d'image (flou, recadrage manuel), envoi direct à une API d'IA, intégration Jira ou GitHub.
+**Hors périmètre V1** : comptes (le partage de projets, §4.12, passe par des liens), Linux, annotation de vidéo (ajoutée ensuite sous forme de mode vidéo sans fichier vidéo, voir `ROADMAP.md`), retouche d'image (flou, recadrage manuel), envoi direct à une API d'IA, intégration Jira ou GitHub.
 
 **Évolution à fort potentiel [C]** : un serveur MCP local exposant la session ouverte. Claude Code lirait alors les retours et les images sans passer par un PDF, et pourrait cocher lui-même les points traités.
 
