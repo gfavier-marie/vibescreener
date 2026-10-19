@@ -18,6 +18,7 @@ export function ProjectsPanel(props: {
   projects: ProjectSummary[];
   initialId?: string;
   initialNotice?: Notice | null;
+  initialShare?: boolean; // partage déplié à l'ouverture (bouton Partager de l'en-tête)
   sessionId?: string; // revue ouverte dans l'éditeur
   onOpen: (id: string) => void;
   onExport: (id: string) => void;
@@ -31,7 +32,7 @@ export function ProjectsPanel(props: {
   const [renaming, setRenaming] = useState(false);
   const [importing, setImporting] = useState(false);
   const [linkText, setLinkText] = useState('');
-  const [shareOpen, setShareOpen] = useState(false);
+  const [shareOpen, setShareOpen] = useState(!!props.initialShare);
   const [link, setLink] = useState<ShareLink | undefined>();
   const [sending, setSending] = useState<{ done: number; total: number } | null>(null);
   const [notice, setNotice] = useState<Notice | null>(props.initialNotice ?? null);
@@ -44,9 +45,13 @@ export function ProjectsPanel(props: {
   };
   useEffect(() => saveContext, []);
 
-  useEffect(() => {
+  /** Autre projet choisi : renommage et partage refermés. */
+  const select = (id: string) => {
+    setSelectedId(id);
     setRenaming(false);
     setShareOpen(false);
+  };
+  useEffect(() => {
     setLink(undefined);
     if (project) void api.shareLink(project.id).then(setLink);
   }, [project?.id]);
@@ -56,14 +61,14 @@ export function ProjectsPanel(props: {
 
   async function create(name: string) {
     setCreating(false);
-    if (name.trim()) setSelectedId(await api.createProject(name));
+    if (name.trim()) select(await api.createProject(name));
   }
 
   async function runImport(source?: string) {
     const r = await api.importProject(source);
     setNotice(importNotice(r));
     if (r?.ok) {
-      setSelectedId(r.report.projectId);
+      select(r.report.projectId);
       setImporting(false);
       setLinkText('');
     }
@@ -90,7 +95,7 @@ export function ProjectsPanel(props: {
           <ul>
             {projects.map((p) => (
               <li key={p.id}>
-                <button type="button" className={`project ${p.id === project?.id ? 'selected' : ''}`} onClick={() => setSelectedId(p.id)}>
+                <button type="button" className={`project ${p.id === project?.id ? 'selected' : ''}`} onClick={() => select(p.id)}>
                   <span className="title">{p.name}</span>
                   <span className="meta">
                     {P.reviews(p.sessions.length)}

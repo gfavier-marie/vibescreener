@@ -565,4 +565,5 @@ Choix du 19 oct. : **les deux** façons de partager, le fichier d'abord (il sert
 - [x] Tests : projets (migration, projet en cours, rangement), fichier (aller, complément, revue gardée ou remplacée), lien (chiffré, mis à jour au même lien, arrêté), relais (droits du jeton, expiration)
 - [x] Page Confidentialité du site (cinq langues) : le partage par lien
 - [x] Déploiement (19 oct.) : bucket R2 `vibescreener-shares` et sa règle d'expiration (commandes dans `apps/relay/wrangler.jsonc`), relais, site, version **0.16.0**
+- [x] Bouton **Partager** à côté d'Exporter dans l'en-tête de l'éditeur : il ouvre le partage du projet de la revue (le panneau Projets seul, derrière le nom du projet en gris, ne se trouvait pas : retour d'essai sous Windows) ; version **0.16.1**
 - [ ] Essai réel dans l'app (avec ton accord) : panneau Projets, partage par lien et par fichier entre deux ordinateurs (ou deux comptes), double-clic sur un `.vibescreener` (Mac, puis Windows)

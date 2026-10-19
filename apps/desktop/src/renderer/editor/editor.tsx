@@ -99,9 +99,9 @@ function App() {
   const [renaming, setRenaming] = useState(false);
   const [exportMenu, setExportMenu] = useState(false);
   const [appMenu, setAppMenu] = useState<MenuState | null>(null); // menu ≡ ouvert : entrées du menu de l'icône
-  // Panneau des projets ouvert : sur ce projet (sinon le projet en cours), avec un message (import)
-  const [projectsOpen, setProjectsOpen] = useState<{ projectId?: string; notice?: Notice | null; key: number } | null>(null);
-  const openProjects = (projectId?: string, notice?: Notice | null) => setProjectsOpen({ projectId, notice, key: Date.now() });
+  // Panneau des projets ouvert : sur ce projet (sinon le projet en cours), avec un message (import) ou son partage déplié
+  const [projectsOpen, setProjectsOpen] = useState<{ projectId?: string; notice?: Notice | null; share?: boolean; key: number } | null>(null);
+  const openProjects = (projectId?: string, notice?: Notice | null, share = false) => setProjectsOpen({ projectId, notice, share, key: Date.now() });
   const [projects, setProjects] = useState<ProjectSummary[]>([]);
   const sessionsOpen = !!projectsOpen;
   const [toast, setToast] = useState<{ text: string; error?: boolean } | null>(null);
@@ -318,6 +318,7 @@ function App() {
       projects={projects}
       initialId={projectsOpen.projectId}
       initialNotice={projectsOpen.notice}
+      initialShare={projectsOpen.share}
       sessionId={session?.id}
       onOpen={(id) => void openSession(id)}
       onExport={(id) => void openSession(id, true)}
@@ -692,6 +693,11 @@ function App() {
             {T.editor.opening(opening.name, opening.done, opening.total)}
           </span>
         )}
+        {/* Partager le projet de la revue : le panneau des projets s'ouvre sur son partage. */}
+        <button type="button" className="btn share" onClick={() => openProjects(project?.id, null, true)}>
+          <I.Share size={14} />
+          {T.projects.share}
+        </button>
         <div className="export">
           <button type="button" className="btn primary" aria-haspopup="menu" aria-expanded={exportMenu} onClick={() => setExportMenu((v) => !v)}>
             <I.Export size={15} />
