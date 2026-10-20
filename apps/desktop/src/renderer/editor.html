@@ -22,22 +22,26 @@
       .mode-documents { --mc: #6aa8ff; --mcs: rgba(106, 168, 255, 0.16); }
       .mode-tour { --mc: #3dd9a4; --mcs: rgba(61, 217, 164, 0.16); }
       textarea::placeholder, input::placeholder { color: var(--faint); }
-      .editor { display: grid; grid-template-rows: auto 1fr auto; height: 100%; }
+      /* Colonne à la largeur de la fenêtre : sinon la bande de vignettes l'élargit et l'en-tête déborde. */
+      .editor { display: grid; grid-template-columns: minmax(0, 1fr); grid-template-rows: auto 1fr auto; height: 100%; }
 
       /* En-tête : sert aussi de barre de titre (macOS : feux tricolores à gauche). */
       header {
-        min-height: 52px; display: flex; flex-wrap: wrap; align-items: center; gap: 10px 12px; padding: 8px 14px 8px 16px;
+        min-height: 52px; display: flex; align-items: center; gap: 12px; padding: 8px 14px 8px 16px;
         background: var(--header); border-bottom: 1px solid var(--border); -webkit-app-region: drag;
       }
       .mac header { padding-left: 84px; }
       header button, header input, header .chip { -webkit-app-region: no-drag; }
+      /* Fenêtre étroite : projet, nom, décompte et indicateurs se raccourcissent, les boutons restent entiers. */
+      header > * { flex: none; }
+      header > .crumb, header > .name, header > .count, header > .chip { flex: 0 1 auto; min-width: 0; overflow: hidden; white-space: nowrap; text-overflow: ellipsis; }
       .crumb { height: 30px; padding: 0 8px; border: 0; border-radius: 7px; background: transparent; color: var(--muted); font-size: 13.5px; }
       .crumb:hover { background: var(--chip); color: var(--text); }
       .crumb-sep { margin: 0 -8px; color: var(--faint); }
       .name { display: flex; align-items: center; gap: 7px; height: 30px; padding: 0 8px; border: 0; border-radius: 7px; background: transparent; cursor: text; }
       .name:hover { background: var(--chip); }
-      .name span { font-size: 13.5px; font-weight: 600; letter-spacing: -0.01em; }
-      .name svg { color: var(--faint); }
+      .name span { min-width: 0; overflow: hidden; text-overflow: ellipsis; font-size: 13.5px; font-weight: 600; letter-spacing: -0.01em; }
+      .name svg { flex: none; color: var(--faint); }
       .name-input { height: 30px; width: 280px; padding: 0 8px; border: 1px solid var(--accent); border-radius: 7px; background: var(--stage); font-size: 13.5px; font-weight: 600; outline: none; }
       .count { color: var(--muted); font-variant-numeric: tabular-nums; white-space: nowrap; }
       .spacer { flex: 1; }
