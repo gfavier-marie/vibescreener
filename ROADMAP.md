@@ -590,4 +590,5 @@ Choix du 19 oct. : **les deux** façons de partager, le fichier d'abord (il sert
 - [x] Éditeur vide : cartes allégées (nom et une phrase, mode d'emploi en info-bulle), apparition en cascade, survol animé à la couleur du mode (sans animation si le système la réduit)
 - [x] Déploiement (19 oct.) : relais (visionneuse), version **0.18.0**
 - [ ] Essai dans l'app : partage, nom, menu Nouveau, vignettes réduites, éditeur vide
+- [x] Correctif 0.18.1 (20 oct.) : en-tête de l'éditeur coupé (Exporter hors de l'écran) quand la bande de vignettes était plus large que la fenêtre ; en fenêtre étroite, titres raccourcis, boutons entiers sur une ligne
 
