@@ -210,6 +210,9 @@ On se promène vite dans un logiciel ; à l'arrêt, toute son interface est en c
   - un menu qui déborde de la fenêtre est coupé à son bord ;
   - un survol qui reste affiché peut donner une capture ; une vidéo qui joue empêche l'écran d'être stable ;
   - une page qui se charge pendant le défilement peut laisser un raccord.
+- **Depuis une vidéo** (demandé le 21 oct. 2026) : l'enregistrement d'écran d'un téléphone, où VibeScreener ne tourne pas (.mov, .mp4, .m4v ; H.264 ou HEVC), déposé sur l'éditeur ou choisi par « Parcours depuis une vidéo… » (menu Nouveau, menu de l'icône, lien de l'éditeur vide). Il est lu à vitesse réelle à la place de la fenêtre filmée, avec la même analyse ; l'import dure donc la durée de la vidéo (progression dans l'en-tête de l'éditeur), « Arrêter le parcours » l'interrompt en gardant les écrans déjà vus. Session nommée d'après le fichier (« Parcours ScreenRecording_1021 »).
+  - HEVC sous Windows : il faut les extensions vidéo HEVC de Microsoft ; sinon le message propose « Le plus compatible » (H.264) sur l'iPhone ;
+  - une vidéo plus petite que l'écran du téléphone (défilement entre deux pixels) n'est pas assemblée : chaque arrêt du défilement donne une capture.
 
 ### 4.12 Projets et partage (demandé le 19 oct. 2026)
 

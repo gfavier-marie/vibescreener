@@ -2,7 +2,7 @@
 
 import type { Lang } from '@pastille/shared';
 import type { Texts } from './fr.ts';
-import { clock, daysAgo, hhmm, isMac, isoDay, longDate, minutesAgo, pluralFor, shortDate } from './util.ts';
+import { clock, daysAgo, hhmm, isMac, isoDay, longDate, minutesAgo, mmss, pluralFor, shortDate } from './util.ts';
 
 const plural = pluralFor('es');
 
@@ -82,6 +82,11 @@ export const es: Texts = {
       name: 'Recorrido',
       tagline: 'Toda la app en capturas.',
       text: 'Elige una ventana y recórrela: cada pantalla que se muestra un cuarto de segundo se convierte en una captura.',
+    },
+    tourVideo: {
+      name: 'Recorrido desde un vídeo…',
+      tagline: 'Grabación de pantalla de un iPhone',
+      hint: 'O hacer un recorrido desde una grabación de pantalla de iPhone',
     },
   },
 
@@ -404,6 +409,7 @@ export const es: Texts = {
     deleteScreen: (index: number) => `Eliminar la pantalla ${index} y sus puntos`,
     screenDeleted: (index: number, mod: string) => `Pantalla ${index} eliminada · ${mod}Z para deshacer`,
     opening: (name: string, done: number, total: number) => `${name}: página ${done} / ${total}`,
+    importingVideo: (name: string, done: number, total: number) => `${name}: ${mmss(done)} / ${mmss(total)}`,
     micError: (err: unknown) => `Micro no disponible: ${err}`,
     zoomedImage: 'Imagen ampliada',
   },
@@ -544,6 +550,14 @@ export const es: Texts = {
       empty: 'No se ha guardado ninguna pantalla.',
       emptyDetail:
         'Durante el recorrido, cada pantalla que se queda un cuarto de segundo en la ventana elegida se convierte en una captura. La ventana debe quedar delante de las demás apps.',
+    },
+    // Parcours depuis une vidéo (enregistrement d'écran d'un téléphone)
+    tourVideo: {
+      filter: 'Vídeos',
+      unreadable: (err: string) =>
+        `Vídeo ilegible (${err}). En el iPhone, Ajustes > Cámara > Formatos > Más compatible graba en H.264, que se lee en todas partes.`,
+      emptyDetail:
+        'Cada pantalla que se queda un cuarto de segundo en el vídeo se convierte en una captura: este vídeo no parece contener ninguna.',
     },
     tray: {
       session: (name: string, points: number) => `VibeScreener — ${name} (${plural(points, 'punto', 'puntos')})`,

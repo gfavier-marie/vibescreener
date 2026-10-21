@@ -41,6 +41,7 @@ const api: PastilleApi = {
   // Le chemin d'un fichier déposé ne se lit qu'ici : le processus principal relit le fichier lui-même.
   openDocument: (file) => ipcRenderer.send('document:open', file ? webUtils.getPathForFile(file) : undefined),
   onDocumentProgress: (cb) => on('editor:document-progress', cb),
+  importTourVideo: (file) => ipcRenderer.send('tour:import-video', file ? webUtils.getPathForFile(file) : undefined),
   undo: () => ipcRenderer.send('session:undo'),
   redo: () => ipcRenderer.send('session:redo'),
   dictationAvailable: () => ipcRenderer.invoke('dictation:available'),
@@ -110,6 +111,7 @@ const api: PastilleApi = {
   onTourRelease: (cb) => on('tour:release', cb),
   onTourCompose: (cb) => on('tour:compose', cb),
   tourComposed: (composeId, png) => ipcRenderer.send('tour:composed', composeId, png),
+  tourVideo: (p) => ipcRenderer.send('tour:video', p),
 
   onOverlayShow: (cb) => void on('overlay:show', cb),
   onOverlayWindows: (cb) => void on('overlay:windows', cb),

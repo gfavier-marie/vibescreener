@@ -2,7 +2,7 @@
 
 import type { Lang } from '@pastille/shared';
 import type { Texts } from './fr.ts';
-import { clock, daysAgo, hhmm, isMac, isoDay, longDate, minutesAgo, pluralFor, shortDate } from './util.ts';
+import { clock, daysAgo, hhmm, isMac, isoDay, longDate, minutesAgo, mmss, pluralFor, shortDate } from './util.ts';
 
 const plural = pluralFor('it');
 
@@ -93,6 +93,11 @@ export const it: Texts = {
       name: 'Percorso',
       tagline: "Tutta l'app in catture.",
       text: 'Scegli una finestra e percorrila: ogni schermata mostrata per un quarto di secondo diventa una cattura.',
+    },
+    tourVideo: {
+      name: 'Percorso da un video…',
+      tagline: 'Registrazione schermo di un iPhone',
+      hint: 'Oppure crea un percorso da una registrazione schermo di iPhone',
     },
   },
 
@@ -415,6 +420,7 @@ export const it: Texts = {
     deleteScreen: (index: number) => `Elimina la schermata ${index} e i suoi punti`,
     screenDeleted: (index: number, mod: string) => `Schermata ${index} eliminata · ${mod}Z per annullare`,
     opening: (name: string, done: number, total: number) => `${name}: pagina ${done} / ${total}`,
+    importingVideo: (name: string, done: number, total: number) => `${name}: ${mmss(done)} / ${mmss(total)}`,
     micError: (err: unknown) => `Microfono non disponibile: ${err}`,
     zoomedImage: 'Immagine ingrandita',
   },
@@ -555,6 +561,14 @@ export const it: Texts = {
       empty: 'Nessuna schermata registrata.',
       emptyDetail:
         'Durante il percorso, ogni schermata mostrata per un quarto di secondo nella finestra scelta diventa una cattura. La finestra deve restare davanti alle altre app.',
+    },
+    // Parcours depuis une vidéo (enregistrement d'écran d'un téléphone)
+    tourVideo: {
+      filter: 'Video',
+      unreadable: (err: string) =>
+        `Video illeggibile (${err}). Sull'iPhone, Impostazioni > Fotocamera > Formati > Più compatibile registra in H.264, leggibile ovunque.`,
+      emptyDetail:
+        'Ogni schermata mostrata per un quarto di secondo nel video diventa una cattura: questo video non sembra contenerne.',
     },
     tray: {
       session: (name: string, points: number) => `VibeScreener — ${name} (${plural(points, 'punto', 'punti')})`,

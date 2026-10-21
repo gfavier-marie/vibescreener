@@ -3,7 +3,7 @@
 // Partagés par les fenêtres (renderer/texts.ts) et le processus principal (exports, MCP, dialogues, menus).
 
 import { defaultSessionName, type Lang } from '@pastille/shared';
-import { clock, daysAgo, isMac, longDate, minutesAgo, pluralFor, shortDate } from './util.ts';
+import { clock, daysAgo, isMac, longDate, minutesAgo, mmss, pluralFor, shortDate } from './util.ts';
 
 const plural = pluralFor('fr');
 
@@ -85,6 +85,11 @@ export const fr = {
       name: 'Parcours',
       tagline: "Toute l'app en captures.",
       text: 'Choisissez une fenêtre et promenez-vous : chaque écran affiché un quart de seconde devient une capture.',
+    },
+    tourVideo: {
+      name: 'Parcours depuis une vidéo…',
+      tagline: "Enregistrement d'écran d'un iPhone",
+      hint: "Ou faire un parcours depuis un enregistrement d'écran d'iPhone",
     },
   },
 
@@ -407,6 +412,7 @@ export const fr = {
     deleteScreen: (index: number) => `Supprimer l'écran ${index} et ses points`,
     screenDeleted: (index: number, mod: string) => `Écran ${index} supprimé · ${mod}Z pour annuler`,
     opening: (name: string, done: number, total: number) => `${name} : page ${done} / ${total}`,
+    importingVideo: (name: string, done: number, total: number) => `${name} : ${mmss(done)} / ${mmss(total)}`,
     micError: (err: unknown) => `Micro indisponible : ${err}`,
     zoomedImage: 'Image agrandie',
   },
@@ -551,6 +557,14 @@ export const fr = {
       empty: 'Aucun écran enregistré.',
       emptyDetail:
         'Pendant le parcours, chaque écran resté affiché un quart de seconde dans la fenêtre choisie devient une capture. La fenêtre doit rester devant les autres apps.',
+    },
+    // Parcours depuis une vidéo (enregistrement d'écran d'un téléphone)
+    tourVideo: {
+      filter: 'Vidéos',
+      unreadable: (err: string) =>
+        `Vidéo illisible (${err}). Sur l'iPhone, Réglages > Appareil photo > Formats > « Le plus compatible » enregistre en H.264, lu partout.`,
+      emptyDetail:
+        'Chaque écran resté affiché un quart de seconde dans la vidéo devient une capture : la vidéo ne semble en contenir aucun.',
     },
     tray: {
       session: (name: string, points: number) => `VibeScreener — ${name} (${plural(points, 'point')})`,

@@ -7,7 +7,8 @@ import * as I from '../icons.tsx';
 import { MODE_ACTION, MODES, ModeTile } from '../modes.tsx';
 import { T } from '../texts.ts';
 
-/** Les quatre modes ; pendant une vidéo ou un parcours, sa ligne l'arrête (le raccourci vidéo arrête aussi le parcours). */
+/** Les quatre modes, puis le parcours depuis une vidéo ; pendant une vidéo ou un parcours, sa ligne l'arrête (le raccourci
+ * vidéo arrête aussi le parcours). */
 export function ModeItems({ s, act }: { s: MenuState; act: (a: MenuAction) => void }) {
   return MODES.map((id) => {
     const stop = id === 'video' && s.video.since ? T.menu.stopVideo : id === 'tour' && s.tour ? T.menu.stopTour(s.tour.screens) : null;
@@ -22,7 +23,18 @@ export function ModeItems({ s, act }: { s: MenuState; act: (a: MenuAction) => vo
         {kbd && <kbd>{kbd}</kbd>}
       </button>
     );
-  });
+  }).concat(
+    // Parcours depuis l'enregistrement d'écran d'un téléphone, où VibeScreener ne tourne pas.
+    s.tour ? [] : (
+      <button type="button" className="mode" key="tour-video" onClick={() => act({ type: 'tour-video' })}>
+        <ModeTile id="tour" />
+        <span className="txt">
+          <b>{T.modes.tourVideo.name}</b>
+          <small>{T.modes.tourVideo.tagline}</small>
+        </span>
+      </button>
+    ),
+  );
 }
 
 /** Dans l'éditeur, les modes ont leur menu Nouveau et « Ouvrir l'éditeur » n'a pas de sens : ces entrées sont masquées. */

@@ -2,7 +2,7 @@
 
 import type { Lang } from '@pastille/shared';
 import type { Texts } from './fr.ts';
-import { clock, daysAgo, hhmm, isMac, isoDay, longDate, minutesAgo, pluralFor, shortDate } from './util.ts';
+import { clock, daysAgo, hhmm, isMac, isoDay, longDate, minutesAgo, mmss, pluralFor, shortDate } from './util.ts';
 
 const plural = pluralFor('de');
 
@@ -82,6 +82,11 @@ export const de: Texts = {
       name: 'Rundgang',
       tagline: 'Die ganze App in Screenshots.',
       text: 'Wähl ein Fenster und geh hindurch: Jeder Screen, der eine Viertelsekunde stehen bleibt, wird zum Screenshot.',
+    },
+    tourVideo: {
+      name: 'Rundgang aus einem Video…',
+      tagline: 'Bildschirmaufnahme eines iPhones',
+      hint: 'Oder einen Rundgang aus einer iPhone-Bildschirmaufnahme erstellen',
     },
   },
 
@@ -404,6 +409,7 @@ export const de: Texts = {
     deleteScreen: (index: number) => `Screen ${index} und seine Punkte löschen`,
     screenDeleted: (index: number, mod: string) => `Screen ${index} gelöscht · Rückgängig mit ${mod}Z`,
     opening: (name: string, done: number, total: number) => `${name}: Seite ${done} / ${total}`,
+    importingVideo: (name: string, done: number, total: number) => `${name}: ${mmss(done)} / ${mmss(total)}`,
     micError: (err: unknown) => `Mikro nicht verfügbar: ${err}`,
     zoomedImage: 'Vergrößertes Bild',
   },
@@ -544,6 +550,14 @@ export const de: Texts = {
       empty: 'Kein Screen aufgenommen.',
       emptyDetail:
         'Während des Rundgangs wird jeder Screen, der eine Viertelsekunde im gewählten Fenster zu sehen ist, zum Screenshot. Das Fenster muss vor den anderen Apps bleiben.',
+    },
+    // Parcours depuis une vidéo (enregistrement d'écran d'un téléphone)
+    tourVideo: {
+      filter: 'Videos',
+      unreadable: (err: string) =>
+        `Video nicht lesbar (${err}). Auf dem iPhone nimmt Einstellungen > Kamera > Formate > Maximale Kompatibilität in H.264 auf, das überall läuft.`,
+      emptyDetail:
+        'Jeder Screen, der im Video eine Viertelsekunde stehen bleibt, wird zum Screenshot: Dieses Video scheint keinen zu enthalten.',
     },
     tray: {
       session: (name: string, points: number) => `VibeScreener — ${name} (${plural(points, 'Punkt', 'Punkte')})`,

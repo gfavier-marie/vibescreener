@@ -31,3 +31,5 @@ const pad = (n: number) => String(n).padStart(2, '0');
 export const isoDay = (d: Date) => `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}`;
 /** Heure et minutes sur deux chiffres, séparées par `sep` (« 09h05 », « 09:05 »). */
 export const hhmm = (d: Date, sep: string) => `${pad(d.getHours())}${sep}${pad(d.getMinutes())}`;
+/** Durée en minutes et secondes (« 2:05 »). */
+export const mmss = (seconds: number) => `${Math.floor(seconds / 60)}:${pad(Math.floor(seconds % 60))}`;

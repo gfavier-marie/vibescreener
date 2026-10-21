@@ -4,7 +4,7 @@
 // dont on garde des bandes de lignes, pages assemblées (voir tour.ts).
 
 import { BrowserWindow, desktopCapturer, ipcMain, screen } from 'electron';
-import type { TourCompose, TourGrabbed, TourPiece, TourRegion, VideoCrop, VideoImage, VideoSource, VideoStart } from '../ipc.ts';
+import type { TourCompose, TourGrabbed, TourPiece, TourRegion, TourVideoProgress, VideoCrop, VideoImage, VideoSource, VideoStart } from '../ipc.ts';
 import type { TourGrab } from './tour.ts';
 import { T } from '../texts/index.ts';
 
@@ -13,6 +13,7 @@ export type VideoWindowOptions = {
   loadPage: (win: BrowserWindow, page: 'video') => void;
   onAudio: (chunk: Float32Array) => void;
   onTourThumb?: (thumb: Uint8Array) => void;
+  onTourVideo?: (p: TourVideoProgress) => void;
 };
 
 export function createVideoWindow(opts: VideoWindowOptions) {
@@ -32,6 +33,7 @@ export function createVideoWindow(opts: VideoWindowOptions) {
     waiting.delete(frameId);
   });
   ipcMain.on('tour:thumb', (e, thumb: Uint8Array) => fromWindow(e.sender) && opts.onTourThumb?.(thumb));
+  ipcMain.on('tour:video', (e, p: TourVideoProgress) => fromWindow(e.sender) && opts.onTourVideo?.(p));
   ipcMain.on('tour:grabbed', (e, grabId: number, g: TourGrabbed | null) => {
     if (!fromWindow(e.sender)) return;
     grabbing.get(grabId)?.(g && { ...g, grabId });
@@ -43,19 +45,22 @@ export function createVideoWindow(opts: VideoWindowOptions) {
     composing.delete(composeId);
   });
 
-  /** Ouvre un flux par écran et le micro (sauf `audio: false`) ; rejette avec un message à montrer. */
-  async function start({ audio = true } = {}): Promise<void> {
+  /** Ouvre un flux par écran et le micro (sauf `audio: false`), ou lit la vidéo `file` à la place des écrans ;
+   * rejette avec un message à montrer. */
+  async function start({ audio = true, file }: { audio?: boolean; file?: Uint8Array } = {}): Promise<void> {
     stop();
-    const displays = screen.getAllDisplays();
-    // Pas de vignettes : seuls les identifiants des écrans servent.
-    const sources = await desktopCapturer.getSources({ types: ['screen'], thumbnailSize: { width: 0, height: 0 } }).catch(() => []);
     const list: VideoSource[] = [];
-    displays.forEach((d, i) => {
-      const src = sources.find((s) => s.display_id === String(d.id)) ?? sources[i];
-      if (src) list.push({ displayId: d.id, sourceId: src.id, width: Math.round(d.size.width * d.scaleFactor), height: Math.round(d.size.height * d.scaleFactor) });
-    });
-    if (list.length < displays.length) {
-      throw new Error(process.platform === 'darwin' ? T.main.video.denied : T.main.video.unreadable);
+    if (!file) {
+      const displays = screen.getAllDisplays();
+      // Pas de vignettes : seuls les identifiants des écrans servent.
+      const sources = await desktopCapturer.getSources({ types: ['screen'], thumbnailSize: { width: 0, height: 0 } }).catch(() => []);
+      displays.forEach((d, i) => {
+        const src = sources.find((s) => s.display_id === String(d.id)) ?? sources[i];
+        if (src) list.push({ displayId: d.id, sourceId: src.id, width: Math.round(d.size.width * d.scaleFactor), height: Math.round(d.size.height * d.scaleFactor) });
+      });
+      if (list.length < displays.length) {
+        throw new Error(process.platform === 'darwin' ? T.main.video.denied : T.main.video.unreadable);
+      }
     }
 
     const w = new BrowserWindow({
@@ -72,13 +77,13 @@ export function createVideoWindow(opts: VideoWindowOptions) {
     await new Promise<void>((r) => w.webContents.once('did-finish-load', () => r()));
     const error = await new Promise<string | undefined>((resolve) => {
       started = resolve;
-      w.webContents.send('video:start', { sources: list, audio } satisfies VideoStart);
+      w.webContents.send('video:start', { sources: list, audio, file } satisfies VideoStart);
       setTimeout(() => resolve(T.main.video.noResponse), 15_000);
     });
     started = null;
     if (error) {
       stop();
-      throw new Error(T.main.video.failed(error));
+      throw new Error(file ? T.main.tourVideo.unreadable(error) : T.main.video.failed(error));
     }
   }
 

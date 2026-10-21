@@ -4,7 +4,7 @@
 import { useEffect, useRef, useState } from 'react';
 import { createRoot } from 'react-dom/client';
 import { allAnnotations, type Annotation, type DocumentPage, type Note, type Session } from '@pastille/shared';
-import { imageUrl, type ExportFormat, type MenuAction, type MenuState, type ProjectSummary, type SettingsState } from '../../ipc.ts';
+import { imageUrl, TOUR_VIDEO_EXTENSIONS, type ExportFormat, type ImportProgress, type MenuAction, type MenuState, type ProjectSummary, type SettingsState } from '../../ipc.ts';
 import * as I from '../icons.tsx';
 import { MenuItems, ModeItems } from '../menu/items.tsx';
 import { MODES, ModeTile, type ModeId } from '../modes.tsx';
@@ -30,6 +30,8 @@ const isTyping = (t: EventTarget | null) => t instanceof HTMLTextAreaElement || 
 const isDocumentFile = (f: File) => /\.(pdf|doc[xm]?|dotx?|xl[st][xm]?|pp[st][xm]?|potx?)$/i.test(f.name);
 /** Projet partagé déposé : importé. */
 const isProjectFile = (f: File) => /\.vibescreener$/i.test(f.name);
+// Enregistrement d'écran d'un téléphone : il devient un parcours.
+const isTourVideo = (f: File) => TOUR_VIDEO_EXTENSIONS.includes(f.name.split('.').pop()!.toLowerCase());
 
 /** Image collée ou déposée (PNG, JPEG, WebP…) convertie en PNG ; null si illisible. */
 async function toPng(file: File): Promise<Uint8Array | null> {
@@ -113,7 +115,7 @@ function App() {
   const [videoShortcut, setVideoShortcut] = useState(isMac ? '⌃⌥⌘R' : 'Ctrl+Alt+R');
   const [tablet, setTablet] = useState(false);
   const [zoomed, setZoomed] = useState<string | null>(null); // croquis ou inspiration agrandi
-  const [opening, setOpening] = useState<{ name: string; done: number; total: number } | null>(null); // document en cours d'ouverture
+  const [opening, setOpening] = useState<ImportProgress>(null); // document en cours d'ouverture, vidéo en cours de parcours
   const [thumbsHidden, setThumbsHidden] = useState(false); // vignettes réduites : toute la place pour la capture
   const [newNoteId, setNewNoteId] = useState<string | null>(null); // remarque juste ajoutée, à mettre au focus
   const activeNote = useRef<string | null>(null); // remarque en cours de saisie
@@ -449,7 +451,9 @@ function App() {
       const files = [...(e.dataTransfer?.files ?? [])];
       const shared = files.find(isProjectFile);
       const doc = files.find(isDocumentFile);
-      if (shared) void api.importProject(shared).then((r) => openProjects(r?.ok ? r.report.projectId : undefined, importNotice(r)));
+      const tourVideo = files.find(isTourVideo);
+      if (tourVideo) api.importTourVideo(tourVideo);
+      else if (shared) void api.importProject(shared).then((r) => openProjects(r?.ok ? r.report.projectId : undefined, importNotice(r)));
       else if (doc) api.openDocument(doc);
       else attach(e.dataTransfer?.files);
     };
@@ -495,6 +499,9 @@ function App() {
             </button>
           ))}
         </div>
+        <button type="button" className="link" onClick={() => api.importTourVideo()}>
+          {T.modes.tourVideo.hint}
+        </button>
         <button type="button" className="btn" onClick={() => openProjects()}>
           <I.Folder size={14} />
           {T.projects.title}
@@ -688,7 +695,7 @@ function App() {
         {opening && (
           <span className="chip">
             <I.Spinner size={11} />
-            {T.editor.opening(opening.name, opening.done, opening.total)}
+            {(opening.video ? T.editor.importingVideo : T.editor.opening)(opening.name, opening.done, opening.total)}
           </span>
         )}
         {/* Les quatre modes, lus à l'ouverture : pendant une vidéo ou un parcours, sa ligne l'arrête. */}

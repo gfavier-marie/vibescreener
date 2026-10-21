@@ -24,7 +24,8 @@ import {
   systemPreferences,
 } from 'electron';
 import { allAnnotations, findAnnotation, findComment, isDocumentSession, markDeleted, isLang, isSkippedPage, parseShareUrl, pickLang, slugify, SHARE_EXT, type Geometry, type Session } from '@pastille/shared';
-import type { CaptureResult, EditorFocus, ExportFormat, ExportResult, MenuAction, MenuState, PairingState, SettingsState, SettingsTab, TourRegion, VideoFeedback } from '../ipc.ts';
+import { TOUR_VIDEO_DISPLAY, TOUR_VIDEO_EXTENSIONS } from '../ipc.ts';
+import type { CaptureResult, EditorFocus, ExportFormat, ExportResult, ImportProgress, MenuAction, MenuState, PairingState, SettingsState, SettingsTab, TourRegion, TourVideoProgress, VideoFeedback } from '../ipc.ts';
 import { createCapture, followWindow, listWindows, windowTarget, type CapturedImage, type ChosenWindow } from './capture.ts';
 import { createClicks } from './clicks.ts';
 import { createDictation } from './dictation.ts';
@@ -359,7 +360,13 @@ function reportCapture(r: CaptureResult) {
 // un point (voir video.ts). ⌃⌥⌘R ou « Arrêter » ouvre l'éditeur. Pas de fichier vidéo : la session reste ordinaire.
 
 const VIDEO_SHORTCUT = isMac ? 'Command+Control+Alt+R' : 'Control+Alt+R';
-const videoWindow = createVideoWindow({ preload, loadPage, onAudio: (chunk) => video.onAudio(chunk), onTourThumb: (thumb) => tour.onThumb(thumb) });
+const videoWindow = createVideoWindow({
+  preload,
+  loadPage,
+  onAudio: (chunk) => video.onAudio(chunk),
+  onTourThumb: (thumb) => tour.onThumb(thumb),
+  onTourVideo: (p) => onTourVideo(p),
+});
 const videoFeedback = createVideoFeedback({ preload, loadPage });
 let videoFeedbackState: VideoFeedback = null;
 let videoInspiration = false;
@@ -541,8 +548,8 @@ async function stopVideo() {
 let tourChoosing: { editorWasOpen: boolean } | null = null; // overlay ouvert pour choisir la fenêtre
 let tourStarting = false;
 let tourFinishing: Promise<TourSummary> | null = null;
-// Fenêtre suivie (sans identifiant : l'écran entier), sa zone, et si la session du parcours est prête.
-let tourTarget: { windowId?: number; app?: string; region: TourRegion; scaleFactor: number; session: boolean } | null = null;
+// Fenêtre suivie (sans identifiant : l'écran entier, ou la vidéo importée `video`), sa zone, et si la session du parcours est prête.
+let tourTarget: { windowId?: number; app?: string; video?: string; region: TourRegion; scaleFactor: number; session: boolean } | null = null;
 let tourMetrics: ReturnType<typeof setInterval> | undefined;
 const logTour = (entry: Record<string, unknown>) => console.log('TOUR', JSON.stringify(entry));
 
@@ -651,6 +658,7 @@ function finishTour(): Promise<TourSummary> {
     clearInterval(tourMetrics);
     const summary = await tour.stop();
     videoWindow.stop();
+    if (tourTarget?.video) sendImportProgress(null);
     tourTarget = null;
     updateTrayMenu();
     return summary;
@@ -659,10 +667,64 @@ function finishTour(): Promise<TourSummary> {
 }
 
 async function stopTour() {
+  const fromVideo = !!tourTarget?.video;
   const summary = await finishTour();
   logTour({ stopped: true, ...summary });
   if (summary.firstCaptureId) showEditor({ captureId: summary.firstCaptureId });
-  else void dialog.showMessageBox({ message: T.main.tour.empty, detail: T.main.tour.emptyDetail });
+  else void dialog.showMessageBox({ message: T.main.tour.empty, detail: fromVideo ? T.main.tourVideo.emptyDetail : T.main.tour.emptyDetail });
+}
+
+// Parcours depuis une vidéo : l'enregistrement d'écran d'un téléphone (où VibeScreener ne tourne pas) est lu
+// à vitesse réelle par la fenêtre cachée, à la place d'un écran filmé ; le reste du parcours est le même.
+
+const sendImportProgress = (p: ImportProgress) => editor?.webContents.send('editor:document-progress', p);
+
+async function importTourVideo(path?: string) {
+  if (tourFinishing || tour.isRecording()) return;
+  if (tourChoosing || tourStarting || videoStarting || videoFinishing || video.isRecording() || capture.isBusy() || documents.isBusy()) return;
+  if (!license.canCapture()) {
+    checkLicense();
+    return showSettings('license');
+  }
+  await finishRecording();
+  if (!path) {
+    showEditor();
+    const r = await dialog.showOpenDialog(editor!, {
+      properties: ['openFile'],
+      filters: [{ name: T.main.tourVideo.filter, extensions: TOUR_VIDEO_EXTENSIONS }],
+    });
+    path = r.filePaths[0];
+    if (r.canceled || !path) return;
+  }
+  if (tourStarting || tour.isRecording()) return; // deuxième demande pendant le dialogue
+  const name = basename(path);
+  tourStarting = true;
+  try {
+    const file = new Uint8Array(await readFile(path));
+    const region: TourRegion = { displayId: TOUR_VIDEO_DISPLAY, rect: { x: 0, y: 0, width: 1, height: 1 } };
+    // Échelle des écrans d'iPhone récents, à titre indicatif seulement.
+    tourTarget = { app: name.replace(/\.[^.]+$/, ''), video: name, region, scaleFactor: 3, session: false };
+    await videoWindow.start({ audio: false, file });
+    tour.start();
+    videoWindow.tourRegion(region);
+    sendImportProgress({ name, done: 0, total: 0, video: true });
+    logTour({ started: true, video: name });
+  } catch (err) {
+    videoWindow.stop();
+    tourTarget = null;
+    void dialog.showMessageBox({ type: 'warning', message: err instanceof Error ? err.message : T.main.tourVideo.unreadable(String(err)) });
+  } finally {
+    tourStarting = false;
+    updateTrayMenu();
+  }
+}
+
+/** Vidéo importée : progression dans l'éditeur ; à sa fin, le parcours s'arrête et l'éditeur montre ses écrans. */
+function onTourVideo(p: TourVideoProgress) {
+  const t = tourTarget;
+  if (!t?.video || !tour.isRecording()) return;
+  if (p.ended) return void stopTour();
+  sendImportProgress({ name: t.video, done: Math.floor(p.time), total: Math.round(p.duration), video: true });
 }
 
 /** Avant d'ouvrir autre chose : vidéo et parcours s'arrêtent (ce qu'ils ont gardé est enregistré). */
@@ -885,6 +947,8 @@ function onMenuAction(a: MenuAction) {
       return void toggleVideo();
     case 'tour':
       return toggleTour();
+    case 'tour-video':
+      return void importTourVideo();
     case 'open-document':
       return void openDocument();
     case 'editor':
@@ -1523,6 +1587,7 @@ ipcMain.handle('dictee:sample', async () =>
 ipcMain.on('capture:start', () => startCapture());
 ipcMain.on('video:toggle', () => void toggleVideo());
 ipcMain.on('tour:toggle', () => toggleTour());
+ipcMain.on('tour:import-video', (_e, path?: string) => void importTourVideo(path));
 
 // ——— Test de bout en bout sans interaction ———
 
@@ -1909,7 +1974,7 @@ void app.whenReady().then(async () => {
   // Écran branché ou débranché : les flux filmés ne correspondent plus, l'enregistrement s'arrête.
   const stopOnDisplayChange = () => {
     if (video.isRecording()) void stopVideo();
-    if (tour.isRecording()) void stopTour();
+    if (tour.isRecording() && !tourTarget?.video) void stopTour(); // une vidéo importée ne dépend pas des écrans
   };
   screen.on('display-added', stopOnDisplayChange);
   screen.on('display-removed', stopOnDisplayChange);

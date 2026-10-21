@@ -371,6 +371,9 @@
       .projects .move select { position: absolute; inset: 0; opacity: 0; cursor: pointer; }
       .projects .foot { display: flex; }
       .empty .btn .faint { color: var(--faint); font-weight: 400; }
+      /* Parcours depuis une vidéo de téléphone : sous les cartes, sans en faire une cinquième. */
+      .empty .link { margin-top: -8px; padding: 2px 6px; border: 0; background: none; color: var(--muted); font-size: 12.5px; text-decoration: underline; text-underline-offset: 3px; cursor: pointer; -webkit-app-region: no-drag; animation: rise 0.5s ease-out 0.4s both; }
+      .empty .link:hover { color: var(--text); }
       .zoomed { position: fixed; inset: 0; z-index: 20; background: rgba(0, 0, 0, 0.7); display: grid; place-items: center; cursor: zoom-out; }
       .zoomed img { max-width: 90%; max-height: 90%; background: #fff; border-radius: 8px; }
     </style>

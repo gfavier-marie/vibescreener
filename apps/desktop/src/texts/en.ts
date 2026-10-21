@@ -2,7 +2,7 @@
 
 import type { Lang } from '@pastille/shared';
 import type { Texts } from './fr.ts';
-import { clock, daysAgo, hhmm, isMac, isoDay, longDate, minutesAgo, pluralFor, shortDate } from './util.ts';
+import { clock, daysAgo, hhmm, isMac, isoDay, longDate, minutesAgo, mmss, pluralFor, shortDate } from './util.ts';
 
 const plural = pluralFor('en');
 
@@ -82,6 +82,11 @@ export const en: Texts = {
       name: 'Walkthrough',
       tagline: 'The whole app, in captures.',
       text: 'Pick a window and walk through it: every screen shown for a quarter of a second becomes a capture.',
+    },
+    tourVideo: {
+      name: 'Walkthrough from a video…',
+      tagline: 'Screen recording from an iPhone',
+      hint: 'Or make a walkthrough from an iPhone screen recording',
     },
   },
 
@@ -404,6 +409,7 @@ export const en: Texts = {
     deleteScreen: (index: number) => `Delete screen ${index} and its points`,
     screenDeleted: (index: number, mod: string) => `Screen ${index} deleted · ${mod}Z to undo`,
     opening: (name: string, done: number, total: number) => `${name}: page ${done} / ${total}`,
+    importingVideo: (name: string, done: number, total: number) => `${name}: ${mmss(done)} / ${mmss(total)}`,
     micError: (err: unknown) => `Microphone unavailable: ${err}`,
     zoomedImage: 'Enlarged image',
   },
@@ -545,6 +551,14 @@ export const en: Texts = {
       empty: 'No screen recorded.',
       emptyDetail:
         'During the walkthrough, every screen that stays on display for a quarter of a second in the chosen window becomes a capture. The window must stay in front of other apps.',
+    },
+    // Parcours depuis une vidéo (enregistrement d'écran d'un téléphone)
+    tourVideo: {
+      filter: 'Videos',
+      unreadable: (err: string) =>
+        `Unreadable video (${err}). On the iPhone, Settings > Camera > Formats > Most Compatible records in H.264, which plays everywhere.`,
+      emptyDetail:
+        'Every screen that stays on display for a quarter of a second in the video becomes a capture: this video does not seem to contain any.',
     },
     tray: {
       session: (name: string, points: number) => `VibeScreener — ${name} (${plural(points, 'point', 'points')})`,

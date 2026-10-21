@@ -525,6 +525,17 @@ Lignes `TOUR {json}` : par image figée (défilement trouvé, durée de `findScr
 
 *Critère : une page de 4 écrans défilée au trackpad donne une seule image sans raccord visible ; menu ouvert puis refermé donne 2 captures, pas 3 ; < 30 % d'un cœur.*
 
+### Parcours depuis une vidéo (demandé le 21 oct. 2026)
+
+VibeScreener ne tourne pas sur iPhone : l'enregistrement d'écran du téléphone, importé, donne les mêmes captures qu'un parcours. Choix validés : **lecture à vitesse réelle** (même chemin qu'un parcours, `tour.ts` et `stitch.ts` inchangés) ; **trois accès** : dépôt sur l'éditeur, menu Nouveau et menu de l'icône, lien de l'éditeur vide. SPEC §4.11.
+
+- [x] Fenêtre cachée : la vidéo (octets → `blob:`, CSP `media-src blob:`) lue sans le son, 10 images/s en `VideoFrame`, comme un écran fictif ; position chaque seconde, puis sa fin
+- [x] `index.ts` : `importTourVideo` (dialogue ou fichier déposé, licence, session nommée d'après le fichier), progression dans l'éditeur, fin de la vidéo = arrêt du parcours ; un changement d'écrans ne l'arrête pas
+- [x] Textes dans les cinq langues
+- [x] Banc dans le navigateur (vidéo de synthèse → vrai `renderer/video.ts` + vrai `createTour`) : H.264 .mp4 et HEVC .mov donnent 3 captures (page défilée assemblée à 2180 px, menu à part, autre écran) ; vidéo réduite à 75 % : pas d'assemblage (défilement entre deux pixels)
+- [x] Version **0.19.0** (21 oct.)
+- [ ] Essai réel (avec ton accord) : un vrai enregistrement d'écran d'iPhone (HEVC), défilement assemblé ? barre d'état (heure, pastille rouge) gênante ? Windows
+
 ### Lot P2 — Docs et version
 
 - [x] SPEC §4.11, `CLAUDE.md`

@@ -63,8 +63,19 @@ export type VideoImage = {
 
 export const VIDEO_THUMB = { width: 64, height: 36 };
 
-/** Fenêtre cachée : écrans filmés, et micro ouvert ou non (le mode parcours n'écoute pas). */
-export type VideoStart = { sources: VideoSource[]; audio: boolean };
+/** Fenêtre cachée : écrans filmés, et micro ouvert ou non (le mode parcours n'écoute pas). Avec `file`, elle lit
+ * cette vidéo (parcours importé) à la place des écrans, comme un écran numéro TOUR_VIDEO_DISPLAY. */
+export type VideoStart = { sources: VideoSource[]; audio: boolean; file?: Uint8Array };
+
+/** Parcours depuis une vidéo (enregistrement d'écran d'iPhone…) : formats proposés et écran fictif qui la lit. */
+export const TOUR_VIDEO_EXTENSIONS = ['mov', 'mp4', 'm4v'];
+export const TOUR_VIDEO_DISPLAY = 0;
+
+/** Lecture d'une vidéo importée, en secondes. */
+export type TourVideoProgress = { time: number; duration: number; ended: boolean };
+
+/** Progression d'un import (pages d'un document, secondes d'une vidéo). */
+export type ImportProgress = { name: string; done: number; total: number; video?: boolean } | null;
 
 /** Mode parcours : zone suivie, rectangle en 0–1 de son écran. */
 export type TourRegion = { displayId: number; rect: { x: number; y: number; width: number; height: number } };
@@ -154,7 +165,7 @@ export type MenuState = {
 };
 
 export type MenuAction =
-  | { type: 'capture' | 'video' | 'tour' | 'open-document' | 'editor' | 'sessions' | 'export' | 'new-session' | 'pair' | 'claude-code' | 'settings' | 'quit' | 'close' | 'hide-bar' | 'reveal' | 'update' | 'license' }
+  | { type: 'capture' | 'video' | 'tour' | 'tour-video' | 'open-document' | 'editor' | 'sessions' | 'export' | 'new-session' | 'pair' | 'claude-code' | 'settings' | 'quit' | 'close' | 'hide-bar' | 'reveal' | 'update' | 'license' }
   | { type: 'open-recent' | 'export-recent'; id: string };
 
 /** Message de la barre flottante après un export. */
@@ -196,7 +207,8 @@ export type PastilleApi = {
   deleteNote(id: string): void;
   exportSession(format: ExportFormat): Promise<ExportResult>;
   openDocument(file?: File): void; // fichier déposé, ou choisi dans un dialogue
-  onDocumentProgress(cb: (p: { name: string; done: number; total: number } | null) => void): () => void;
+  onDocumentProgress(cb: (p: ImportProgress) => void): () => void;
+  importTourVideo(file?: File): void; // parcours depuis une vidéo déposée, ou choisie dans un dialogue
   undo(): void;
   redo(): void;
   dictationAvailable(): Promise<boolean>;
@@ -266,6 +278,7 @@ export type PastilleApi = {
   onTourRelease(cb: (pieces: number[]) => void): () => void;
   onTourCompose(cb: (plan: TourCompose) => void): () => void;
   tourComposed(composeId: number, png: Uint8Array | null): void;
+  tourVideo(p: TourVideoProgress): void; // vidéo importée : position chaque seconde, puis sa fin
   // Overlay
   onOverlayShow(cb: (data: OverlayShow) => void): void;
   onOverlayWindows(cb: (windows: OverlayWindow[]) => void): void;

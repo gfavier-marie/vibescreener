@@ -3,8 +3,9 @@
 // au processus principal par blocs de 100 ms. Toute la logique reste dans le processus principal.
 // Mode parcours (sans micro) : vignette de la zone suivie à chaque image, images figées dont le processus
 // principal garde des bandes de lignes, puis pages assemblées en PNG (voir main/tour.ts).
+// Parcours depuis une vidéo importée : elle est lue à vitesse réelle et tient lieu d'écran filmé.
 
-import { TOUR_PROFILE, TOUR_THUMB, VIDEO_THUMB, type TourRegion, type VideoSource } from '../ipc.ts';
+import { TOUR_PROFILE, TOUR_THUMB, TOUR_VIDEO_DISPLAY, VIDEO_THUMB, type TourRegion, type VideoSource } from '../ipc.ts';
 
 // Chromium lit les images d'un flux sans les afficher ; l'API n'est pas encore dans lib.dom.
 declare class MediaStreamTrackProcessor<T> {
@@ -122,6 +123,17 @@ api.onTourCompose((plan) =>
   }),
 );
 
+/** Nouvelle image d'un écran : elle remplace la précédente ; zone suivie, sa vignette part. */
+function show(screen: Screen, displayId: number, frame: VideoFrame) {
+  screen.latest?.close();
+  screen.latest = frame;
+  screen.at = performance.now();
+  if (region?.displayId === displayId) {
+    const { sx, sy, sw, sh } = area(region.rect, frame.displayWidth, frame.displayHeight);
+    api.tourThumb(thumbOf(frame, sx, sy, sw, sh));
+  }
+}
+
 /** Un flux par écran, à sa taille physique ; seule la dernière image est gardée. */
 async function film(source: VideoSource) {
   const stream = await navigator.mediaDevices.getUserMedia({
@@ -143,15 +155,38 @@ async function film(source: VideoSource) {
     for (;;) {
       const { value, done } = await reader.read();
       if (done) return;
-      screen.latest?.close();
-      screen.latest = value;
-      screen.at = performance.now();
-      if (region?.displayId === source.displayId) {
-        const { sx, sy, sw, sh } = area(region.rect, value.displayWidth, value.displayHeight);
-        api.tourThumb(thumbOf(value, sx, sy, sw, sh));
-      }
+      show(screen, source.displayId, value);
     }
   })();
+}
+
+/** Vidéo importée, lue sans le son à vitesse réelle : FRAME_RATE images par seconde, comme un écran filmé. */
+async function play(file: Uint8Array) {
+  const video = document.createElement('video');
+  video.muted = true;
+  video.src = URL.createObjectURL(new Blob([file as BlobPart]));
+  await new Promise((resolve, reject) => {
+    video.onloadeddata = resolve;
+    video.onerror = () => reject(new Error(video.error?.message || `code ${video.error?.code}`));
+  });
+  const screen: Screen = { latest: null, at: 0 };
+  screens.set(TOUR_VIDEO_DISPLAY, screen);
+  await video.play();
+  let second = 0;
+  const timer = setInterval(() => {
+    const { currentTime: time, duration } = video;
+    if (video.ended) {
+      clearInterval(timer);
+      return api.tourVideo({ time: duration, duration, ended: true });
+    }
+    try {
+      show(screen, TOUR_VIDEO_DISPLAY, new VideoFrame(video));
+    } catch {
+      // image pas encore décodée (début de la lecture) : la suivante viendra
+    }
+    if (Math.floor(time) !== second) api.tourVideo({ time, duration, ended: false });
+    second = Math.floor(time);
+  }, 1000 / FRAME_RATE);
 }
 
 /** Micro → PCM 16 kHz mono, comme la dictée de l'éditeur (même AudioWorklet). */
@@ -167,9 +202,9 @@ async function listen() {
   node.connect(audio.destination); // le nœud ne produit que du silence
 }
 
-api.onVideoStart(async ({ sources, audio }) => {
+api.onVideoStart(async ({ sources, audio, file }) => {
   try {
-    await Promise.all([...sources.map(film), ...(audio ? [listen()] : [])]);
+    await Promise.all([...sources.map(film), ...(audio ? [listen()] : []), ...(file ? [play(file)] : [])]);
     api.videoStarted();
   } catch (err) {
     api.videoStarted(String(err));
