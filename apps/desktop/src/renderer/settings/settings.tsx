@@ -62,6 +62,7 @@ function App() {
   const [listening, setListening] = useState(false);
   const [copied, setCopied] = useState(false);
   const [licenseKey, setLicenseKey] = useState('');
+  const [changingKey, setChangingKey] = useState(false); // champ de clé rouvert sur une licence active
   const [activating, setActivating] = useState(false);
   const [licenseResult, setLicenseResult] = useState<{ ok: boolean; text: string }>();
 
@@ -102,7 +103,10 @@ function App() {
     const r = await api.activateLicense(licenseKey);
     setActivating(false);
     setLicenseResult(r.ok ? { ok: true, text: S.activated } : { ok: false, text: r.error });
-    if (r.ok) setLicenseKey('');
+    if (r.ok) {
+      setLicenseKey('');
+      setChangingKey(false);
+    }
   }
 
   const silence = s.silenceMs / 1000;
@@ -406,7 +410,7 @@ function App() {
     </Section>
   );
 
-  // Licence : essai ou clé, achat sur le site, activation d'une clé reçue par e-mail.
+  // Licence : essai ou clé (avec son offre), achat sur le site, activation ou changement de clé, version installée.
   const L = s.license;
   const hasKey = L.state === 'licensed' || L.state === 'unverified';
   const license = (
@@ -416,11 +420,16 @@ function App() {
           <span className="device-icon">{L.state === 'trial' || L.state === 'licensed' ? <I.Lock size={20} /> : <I.Warning size={18} />}</span>
           <span className="label">
             <span>
-              {S.licenseStates[L.state](L.daysLeft)}
+              {L.state === 'licensed' && L.plan ? S.licensedPlan[L.plan] : S.licenseStates[L.state](L.daysLeft)}
               {L.key && <span className="key"> · {L.key}</span>}
             </span>
             <small>{S.licenseDetails[L.state]}</small>
           </span>
+          {hasKey && (
+            <button type="button" className="btn" onClick={() => setChangingKey(!changingKey)}>
+              {changingKey ? S.cancel : S.changeKey}
+            </button>
+          )}
           {hasKey ? (
             <button type="button" className="btn" onClick={() => api.openLicensePage('portal')}>
               {S.portal}
@@ -431,7 +440,7 @@ function App() {
             </button>
           )}
         </div>
-        {!hasKey && (
+        {(!hasKey || changingKey) && (
           <div className="row stack">
             <label htmlFor="license-key">
               {S.licenseKey} <small className="hint">{S.licenseKeyHint}</small>
@@ -453,6 +462,12 @@ function App() {
         )}
       </Section>
       {licenseResult && <p className={licenseResult.ok ? 'hint ok' : 'error'}>{licenseResult.text}</p>}
+      <Section title="VibeScreener">
+        <div className="row">
+          <span className="label">{S.version}</span>
+          <span className="key">{s.version}</span>
+        </div>
+      </Section>
     </>
   );
 

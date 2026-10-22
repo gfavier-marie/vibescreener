@@ -11,10 +11,19 @@ import { T } from '../texts/index.ts';
 export const TRIAL_DAYS = 14;
 // Domaine provisoire (M0) : à remplacer partout par le domaine acheté.
 export const SITE_URL = 'https://vibescreener.dev';
+/** Offre achetée : licence à vie ou abonnement mensuel. */
+export type Plan = 'lifetime' | 'subscription';
+
 // Organisation Polar (Settings > Organization ID) et portail client, en production et dans le
-// bac à sable (essais : PASTILLE_POLAR=sandbox).
+// bac à sable (essais : PASTILLE_POLAR=sandbox). Chaque offre a sa propre licence (benefit) chez Polar :
+// celle d'une clé dit ce qui a été acheté. Le bac à sable n'en a qu'une pour les deux offres.
 export const POLAR = {
-  production: { api: 'https://api.polar.sh', org: '1bcec49c-9af5-4f62-a9e9-6048b820fe41', portal: 'https://polar.sh/vibescreener/portal' },
+  production: {
+    api: 'https://api.polar.sh',
+    org: '1bcec49c-9af5-4f62-a9e9-6048b820fe41',
+    portal: 'https://polar.sh/vibescreener/portal',
+    plans: { '1e75bb8b-77cb-431c-b236-26b1b450d352': 'lifetime', '3c4f9213-117a-4af2-bebe-a574645a339c': 'subscription' } as Record<string, Plan>,
+  },
   sandbox: { api: 'https://sandbox-api.polar.sh', org: '7e12481a-4021-46fb-a821-54346f6427be', portal: 'https://sandbox.polar.sh/vibescreener/portal' },
 };
 
@@ -26,6 +35,7 @@ export type LicenseView = {
   state: 'trial' | 'expired' | 'licensed' | 'revoked' | 'unverified';
   daysLeft: number; // de l'essai, 0 une fois fini
   key: string; // clé masquée (« ••••1A2B »), vide sans clé
+  plan?: Plan; // offre de la clé, quand Polar l'a dite
 };
 
 type Stored = {
@@ -35,12 +45,13 @@ type Stored = {
   activationId?: string;
   checkedAt?: string; // dernière réponse de Polar sur la clé
   valid?: boolean; // cette réponse : clé accordée ou refusée
+  benefitId?: string; // licence Polar de la clé, qui dit l'offre achetée
 };
 
 export function createLicense(opts: {
   dataDir: string;
   trialDays?: number;
-  polar?: { api: string; org: string }; // POLAR.production par défaut
+  polar?: { api: string; org: string; plans?: Record<string, Plan> }; // POLAR.production par défaut
   now?: () => number;
   fetch?: typeof fetch;
 }) {
@@ -70,9 +81,11 @@ export function createLicense(opts: {
     const daysLeft = Math.max(0, Math.ceil((Date.parse(stored.trialStartedAt) + trialDays * DAY - now()) / DAY));
     if (!stored.key) return { state: daysLeft > 0 ? 'trial' : 'expired', daysLeft, key: '' };
     const key = `••••${stored.key.slice(-4)}`;
-    if (!stored.valid) return { state: 'revoked', daysLeft, key };
+    const plan = polar.plans?.[stored.benefitId ?? ''];
+    const withPlan = plan ? { plan } : {};
+    if (!stored.valid) return { state: 'revoked', daysLeft, key, ...withPlan };
     const stale = now() - Date.parse(stored.checkedAt ?? '') > OFFLINE_GRACE;
-    return { state: stale ? 'unverified' : 'licensed', daysLeft, key };
+    return { state: stale ? 'unverified' : 'licensed', daysLeft, key, ...withPlan };
   }
 
   async function post(endpoint: 'activate' | 'validate', body: Record<string, string>) {
@@ -83,7 +96,7 @@ export function createLicense(opts: {
     });
   }
 
-  /** Active la clé sur ce Mac (Polar limite le nombre de Mac par clé). */
+  /** Active la clé sur ce Mac (Polar limite le nombre de Mac par clé) ; une nouvelle clé remplace l'ancienne. */
   async function activate(input: string): Promise<{ ok: true } | { ok: false; error: string }> {
     const key = input.trim();
     const L = T.main.license;
@@ -98,8 +111,14 @@ export function createLicense(opts: {
     if (res.status === 404 || res.status === 422) return { ok: false, error: L.unknownKey };
     if (res.status === 403) return { ok: false, error: L.refused };
     if (!res.ok) return { ok: false, error: L.polarError(res.status) };
-    const activation = (await res.json()) as { id: string };
-    Object.assign(stored, { key, activationId: activation.id, checkedAt: new Date(now()).toISOString(), valid: true });
+    const activation = (await res.json()) as { id: string; license_key?: { benefit_id?: string } };
+    Object.assign(stored, {
+      key,
+      activationId: activation.id,
+      benefitId: activation.license_key?.benefit_id,
+      checkedAt: new Date(now()).toISOString(),
+      valid: true,
+    });
     save();
     return { ok: true };
   }
@@ -108,15 +127,17 @@ export function createLicense(opts: {
   async function refresh() {
     if (!stored.key || !stored.activationId) return;
     if (now() - Date.parse(stored.checkedAt ?? '') < CHECK_EVERY) return;
-    let status: number;
+    let res: Response;
     try {
-      status = (await post('validate', { key: stored.key, activation_id: stored.activationId })).status;
+      res = await post('validate', { key: stored.key, activation_id: stored.activationId });
     } catch {
       return; // hors ligne
     }
     // 404 : clé révoquée, désactivée, expirée ou activation retirée. Autre erreur : on réessaiera.
-    if (status !== 200 && status !== 404) return;
-    Object.assign(stored, { checkedAt: new Date(now()).toISOString(), valid: status === 200 });
+    if (res.status !== 200 && res.status !== 404) return;
+    // La réponse redonne la licence de la clé : l'offre s'affiche aussi pour une clé activée avant (0.20.0).
+    const { benefit_id } = res.status === 200 ? ((await res.json().catch(() => ({}))) as { benefit_id?: string }) : {};
+    Object.assign(stored, { checkedAt: new Date(now()).toISOString(), valid: res.status === 200, ...(benefit_id && { benefitId: benefit_id }) });
     save();
   }
 

@@ -139,6 +139,7 @@ export type SettingsState = SettingsView & {
   tabletConnected: boolean;
   mcp: { url?: string; error?: string }; // serveur MCP pour Claude Code
   license: LicenseView;
+  version: string; // version installée de l'app
 };
 
 /** Fenêtre d'appairage : le code QR (image) et l'état de la tablette. */

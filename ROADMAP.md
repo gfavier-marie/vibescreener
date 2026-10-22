@@ -143,6 +143,7 @@ Adresses (domaine **vibescreener.dev**, acheté sur Cloudflare le 6 oct.) : `<do
 - [x] Organisation Polar du bac à sable et portails clients dans `POLAR` (`license.ts`) ; celle de production au lancement
 - [x] `updater.ts` et `install.sh` vers `dl.<domaine>` ; `RELAY_URL` → `relay.<domaine>` (`vibescreener.dev`)
 - [x] `pnpm e2e` photographie l'onglet Licence
+- [x] Réglages › Licence (0.20.1) : offre de la clé (licence à vie ou abonnement : une licence Polar par offre, lue à l'activation et à chaque vérification), « Changer de clé », version installée ; assistant : « Trois autorisations » sur Mac
 
 **M3 — Site** (`apps/site`, HTML/CSS statique)
 - [x] Landing reprise de la maquette « VibeScreener — landing » (canevas Claude Design, 6 oct.) : démo animée sur une app d'exemple, avant/après, 3 gestes, fonctionnalités, éditeur, **tarifs** (deux cartes, chacune retirable), FAQ, appel final ; polices hébergées sur le site (pas de Google Fonts) ; vérifiée en local à 375 px et au bureau

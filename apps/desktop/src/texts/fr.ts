@@ -253,6 +253,10 @@ export const fr = {
     },
     buy: 'Acheter',
     portal: 'Gérer mon achat',
+    changeKey: 'Changer de clé',
+    cancel: 'Annuler',
+    licensedPlan: { lifetime: 'Licence à vie active', subscription: 'Abonnement mensuel actif' },
+    version: 'Version installée',
     licenseKey: 'Clé de licence',
     licenseKeyHint: "Elle figure dans l'e-mail reçu après l'achat.",
     activate: 'Activer',
@@ -268,7 +272,7 @@ export const fr = {
     back: 'Retour',
     finish: 'Terminer',
     permissions: {
-      title: isMac ? 'Deux autorisations pour commencer' : 'Une autorisation pour commencer', // Windows : micro seulement
+      title: isMac ? 'Trois autorisations pour commencer' : 'Une autorisation pour commencer', // Windows : micro seulement
       intro: "VibeScreener capture la fenêtre que vous relisez et écoute vos commentaires. Les images et l'audio restent sur cet ordinateur.",
       screen: "Enregistrement de l'écran",
       screenWhy: 'Pour capturer la fenêtre à relire en pleine résolution.',

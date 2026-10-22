@@ -90,6 +90,28 @@ describe('licence', () => {
     expect(license.view().state).toBe('licensed');
   });
 
+  it("dit l'offre de la clé : lue à l'activation, retrouvée à la vérification pour une clé plus ancienne", async () => {
+    const plans = { 'benefit-vie': 'lifetime', 'benefit-abo': 'subscription' } as const;
+    const dir = await mkdtemp(join(tmpdir(), 'pastille-license-'));
+    const clock = { t: Date.parse('2026-10-06T10:00:00Z') };
+    let benefit: string | undefined = 'benefit-abo';
+    const fakeFetch = (async (url: string) =>
+      url.endsWith('activate')
+        ? json(200, { id: 'activation-1', license_key: { benefit_id: benefit } })
+        : json(200, { benefit_id: 'benefit-vie' })) as typeof fetch;
+    const make = () => createLicense({ dataDir: dir, polar: { ...polar, plans }, now: () => clock.t, fetch: fakeFetch });
+    const license = make();
+    await license.activate('VIBE-1');
+    expect(make().view()).toMatchObject({ state: 'licensed', plan: 'subscription' });
+    benefit = undefined; // réponse sans licence : offre inconnue
+    await license.activate('VIBE-2'); // une nouvelle clé remplace l'ancienne
+    expect(license.view()).toMatchObject({ state: 'licensed', key: '••••BE-2' });
+    expect(license.view().plan).toBeUndefined();
+    clock.t += DAY + 1;
+    await license.refresh();
+    expect(license.view().plan).toBe('lifetime');
+  });
+
   it("une erreur passagère de Polar ne change rien", async () => {
     let failing = false;
     const { make, clock } = await setup((e) => (e === 'validate' && failing ? json(500) : granted()));

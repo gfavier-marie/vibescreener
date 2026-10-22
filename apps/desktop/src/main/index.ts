@@ -1170,6 +1170,7 @@ function settingsState(): SettingsState {
     tabletConnected: tablet?.isConnected() ?? false,
     mcp: mcpStatus,
     license: license.view(),
+    version: app.getVersion(),
   };
 }
 
