@@ -12,9 +12,9 @@ export const TRIAL_DAYS = 14;
 // Domaine provisoire (M0) : à remplacer partout par le domaine acheté.
 export const SITE_URL = 'https://vibescreener.dev';
 // Organisation Polar (Settings > Organization ID) et portail client, en production et dans le
-// bac à sable (essais : PASTILLE_POLAR=sandbox). Production à renseigner au lancement (M4).
+// bac à sable (essais : PASTILLE_POLAR=sandbox).
 export const POLAR = {
-  production: { api: 'https://api.polar.sh', org: '', portal: 'https://polar.sh/vibescreener/portal' },
+  production: { api: 'https://api.polar.sh', org: '1bcec49c-9af5-4f62-a9e9-6048b820fe41', portal: 'https://polar.sh/vibescreener/portal' },
   sandbox: { api: 'https://sandbox-api.polar.sh', org: '7e12481a-4021-46fb-a821-54346f6427be', portal: 'https://sandbox.polar.sh/vibescreener/portal' },
 };
 

@@ -418,8 +418,8 @@ export const fr = {
     par_mois_ttc: "par mois, TTC",
     resiliable_tout_moment: "Résiliable à tout moment",
     s_abonner: "S'abonner",
-    prix_licence: "19,99 €",
-    prix_abonnement: "1,99 €",
+    prix_licence: "39,99 €",
+    prix_abonnement: "3,99 €",
   },
   // Questions fréquentes (#faq)
   faq: {
@@ -446,7 +446,7 @@ export const fr = {
     licence_utilisation: "Licence d'utilisation",
     confidentialite: "Confidentialité",
     licences_tierces: "Licences tierces",
-    contact_completer_e_mail: "Contact : [À COMPLÉTER : e-mail]",
+    contact_completer_e_mail: "Contact : <a href=\"mailto:contact@vibescreener.dev\">contact@vibescreener.dev</a>",
     informations: "Informations",
   },
   // Chapitre 02 · Vidéo (#video) : démo animée et maquette Comptoir, étapes, démo interactive, FAQ ;
@@ -653,15 +653,15 @@ export const fr = {
   mentions: {
     mentions_legales_vibescreener: "Mentions légales · VibeScreener",
     editeur_hebergeur_vendeur_site: "Éditeur, hébergeur et vendeur du site et de l'application VibeScreener.",
-    derniere_mise_jour_6: "Dernière mise à jour&nbsp;: 6 octobre 2026",
+    derniere_mise_jour_6: "Dernière mise à jour&nbsp;: 22 octobre 2026",
     editeur: "Éditeur",
     site_vibescreener_dev_application: "Le site vibescreener.dev et l'application VibeScreener sont édités par&nbsp;:",
-    completer_nom_prenom_ou: "[À COMPLÉTER : nom et prénom, ou raison sociale]",
-    completer_statut_par_exemple: "[À COMPLÉTER : statut, par exemple entrepreneur individuel (micro-entreprise)]",
-    siret_completer_siret: "SIRET : [À COMPLÉTER : SIRET]",
-    adresse_completer_adresse: "Adresse : [À COMPLÉTER : adresse]",
-    e_mail_completer_e: "E-mail : [À COMPLÉTER : e-mail]",
-    directeur_publication_completer_nom: "Directeur de la publication : [À COMPLÉTER : nom du directeur de la publication]",
+    completer_nom_prenom_ou: "Guillaume Faviermarie",
+    completer_statut_par_exemple: "Entrepreneur individuel (micro-entreprise)",
+    siret_completer_siret: "SIRET : 891 824 336 00020 (RCS Aix-en-Provence 891 824 336)",
+    adresse_completer_adresse: "Adresse : Lumina B, 40 rue des Prix Nobel, 13100 Aix-en-Provence, France",
+    e_mail_completer_e: "E-mail : <a href=\"mailto:contact@vibescreener.dev\">contact@vibescreener.dev</a>",
+    directeur_publication_completer_nom: "Directeur de la publication : Guillaume Faviermarie",
     hebergement: "Hébergement",
     site_telechargements_relais_tablette: "Le site, les téléchargements, le relais de la tablette et les projets partagés par lien sont hébergés par Cloudflare, Inc., 101 Townsend St, San Francisco, CA 94107, États-Unis (<a href=\"https://www.cloudflare.com\">cloudflare.com</a>).",
     vente_licences: "Vente des licences",
@@ -676,7 +676,7 @@ export const fr = {
   licence: {
     licence_utilisation_vibescreener: "Licence d'utilisation · VibeScreener",
     conditions_utilisation_vibescreener_essai: "Conditions d'utilisation de VibeScreener : essai, licence sur 3 Mac, abonnement, remboursement sous 14 jours.",
-    ces_conditions_s_appliquent: "Ces conditions s'appliquent à l'application VibeScreener, éditée par [À COMPLÉTER : nom et prénom, ou raison sociale] (voir les <a href=\"{{root}}/mentions-legales\">mentions légales</a>). Installer ou utiliser VibeScreener vaut acceptation de ces conditions.",
+    ces_conditions_s_appliquent: "Ces conditions s'appliquent à l'application VibeScreener, éditée par Guillaume Faviermarie (voir les <a href=\"{{root}}/mentions-legales\">mentions légales</a>). Installer ou utiliser VibeScreener vaut acceptation de ces conditions.",
     t_1_ce_que_vous: "1. Ce que vous obtenez",
     licence_vous_donne_droit: "Une licence vous donne le droit d'utiliser VibeScreener. Elle ne vous transfère aucun droit de propriété sur l'application, qui reste à son éditeur.",
     t_2_essai_gratuit: "2. Essai gratuit",
@@ -693,13 +693,13 @@ export const fr = {
     t_6_abonnement_mensuel: "6. Abonnement mensuel",
     abonnement_se_renouvelle_automatiquement: "L'abonnement se renouvelle automatiquement chaque mois. Vous pouvez le résilier à tout moment depuis <a href=\"https://polar.sh/vibescreener/portal\">votre espace client Polar</a>&nbsp;; il reste actif jusqu'à la fin du mois payé. Une fois l'abonnement terminé, l'application ne fait plus de nouvelles captures, comme après l'essai, et vos revues restent accessibles.",
     t_7_remboursement: "7. Remboursement",
-    dans_14_jours_suivant: "Dans les 14 jours suivant un achat ou un renouvellement, vous pouvez demander le remboursement, sans justification, en écrivant à [À COMPLÉTER : e-mail]. La licence remboursée est désactivée.",
+    dans_14_jours_suivant: "Dans les 14 jours suivant un achat ou un renouvellement, vous pouvez demander le remboursement, sans justification, en écrivant à <a href=\"mailto:contact@vibescreener.dev\">contact@vibescreener.dev</a>. La licence remboursée est désactivée.",
     t_8_verification_licence: "8. Vérification de la licence",
     application_verifie_licence_aupres: "L'application vérifie la licence auprès de Polar de temps en temps, avec la clé et un identifiant d'installation aléatoire. Le détail des données est dans la <a href=\"{{root}}/confidentialite\">politique de confidentialité</a>.",
     t_9_garantie_responsabilite: "9. Garantie et responsabilité",
     vibescreener_est_fournie_telle: "VibeScreener est fournie telle quelle, sans garantie qu'elle conviendra à un usage particulier ni qu'elle fonctionnera sans interruption. Dans les limites permises par la loi, l'éditeur n'est pas responsable des dommages indirects liés à son utilisation. Si vous êtes un consommateur, les garanties légales dont vous bénéficiez s'appliquent toujours.",
     t_10_droit_applicable: "10. Droit applicable",
-    ces_conditions_sont_soumises: "Ces conditions sont soumises au droit français. En cas de désaccord, écrivez-nous d'abord à [À COMPLÉTER : e-mail]&nbsp;: nous chercherons une solution à l'amiable.",
+    ces_conditions_sont_soumises: "Ces conditions sont soumises au droit français. En cas de désaccord, écrivez-nous d'abord à <a href=\"mailto:contact@vibescreener.dev\">contact@vibescreener.dev</a>&nbsp;: nous chercherons une solution à l'amiable.",
   },
   // Page confidentialite
   confidentialite: {
@@ -721,7 +721,7 @@ export const fr = {
     transcription_par_api_seulement: "<strong>Transcription par API</strong>, seulement si vous choisissez ce moteur dans les réglages&nbsp;: l'audio de chaque commentaire est envoyé au service que vous avez configuré, selon ses propres conditions.",
     serveur_lu_par_claude: "Le serveur lu par Claude Code n'écoute que sur votre Mac (127.0.0.1) et refuse les requêtes venant d'un navigateur. Ce que vous confiez ensuite à une IA (un PDF collé dans un chat, une revue lue par Claude Code) est traité par ce service, selon ses propres conditions.",
     vos_droits: "Vos droits",
-    vous_pouvez_demander_acces: "Vous pouvez demander l'accès, la rectification ou l'effacement de vos données, ou vous opposer à leur traitement, en écrivant à [À COMPLÉTER : e-mail]. Vous pouvez aussi saisir la CNIL (<a href=\"https://www.cnil.fr\">cnil.fr</a>).",
+    vous_pouvez_demander_acces: "Vous pouvez demander l'accès, la rectification ou l'effacement de vos données, ou vous opposer à leur traitement, en écrivant à <a href=\"mailto:contact@vibescreener.dev\">contact@vibescreener.dev</a>. Vous pouvez aussi saisir la CNIL (<a href=\"https://www.cnil.fr\">cnil.fr</a>).",
   },
   // Page licences-tierces
   tierces: {
