@@ -73,6 +73,7 @@ export const it: Texts = {
     useMicrophone: 'Riaccendere il microfono per dettare',
     keyboardOnly: `Microfono spento: ${isMac ? '⌘' : 'Ctrl'} + clic e scrivi, oppure clicca nel campo`,
     typeToKeep: 'Scrivi il commento, Invio per confermare',
+    move: 'Trascina per spostare la barra',
     reduce: 'Ridurre la barra',
     expand: 'Ingrandire la barra',
     micFailed: (err: string) => `Microfono non disponibile: ${err}`,

@@ -50,7 +50,7 @@ import { createSettings, type Settings } from './settings.ts';
 import { createTranscriber } from './transcriber.ts';
 import { createTour, type TourCheck, type TourSummary } from './tour.ts';
 import { checkForUpdate, updateCommand, updateOutcome, type Update } from './updater.ts';
-import { createVideo, type VideoSummary } from './video.ts';
+import { createVideo, type VideoPoint, type VideoSummary } from './video.ts';
 import { createVideoWindow } from './video-window.ts';
 import { createVideoFeedback } from './video-feedback.ts';
 import { downloadFile, MODEL_FILE, MODEL_URL } from './whisper.ts';
@@ -372,7 +372,8 @@ let videoFeedbackState: VideoFeedback = null;
 let videoInspiration = false;
 let videoActionBusy = false;
 let videoArmed = false; // ⌘ / Ctrl tenu
-let videoWriting: { point: boolean; navigate?: boolean } | null = null; // commentaire écrit en cours ; sans point : remarque générale
+// Commentaire écrit en cours (sans point : remarque générale) ; `text` suit la frappe, pour le garder quand un clic le termine.
+let videoWriting: { point: boolean; text: string } | null = null;
 let videoActionError: string | undefined;
 // Clavier seul (bureau bruyant) : le micro reste fermé, on tape les commentaires.
 const videoTypingFixed = () => settings.get().commentMode === 'keyboard';
@@ -383,7 +384,7 @@ function refreshVideoFeedback() {
     tablet: tablet?.isConnected() ?? false,
     inspiration: videoInspiration ? { shortcut: shortcutLabel(settings.get().shortcut), number: inspirationTarget()?.annotation.number } : undefined,
     // Pendant une inspiration, ⌘ + clic reste à l'app (ouvrir un onglet, par exemple).
-    armed: videoArmed && !videoInspiration && !videoActionBusy && !videoWriting,
+    armed: videoArmed && !videoInspiration && !videoActionBusy,
     writing: !!videoWriting,
     compact: settings.get().videoCompact,
     typing: videoTyping(),
@@ -428,9 +429,12 @@ const inside = (p: { x: number; y: number }, r: Electron.Rectangle) => p.x >= r.
 // Nos fenêtres ne se commentent pas ; la barre ne compte que sous la pilule (le reste laisse passer les clics).
 const overOurWindows = (p: { x: number; y: number }) =>
   videoFeedback.pointerInControls() || menubar.pointerInBar() || BrowserWindow.getAllWindows().some((w) => w.isVisible() && !menubar.isBar(w) && !videoFeedback.isWindow(w) && inside(p, w.getBounds()));
+// Un clic ailleurs termine le commentaire écrit en gardant son texte : ⌘ + clic n'active pas l'app cliquée
+// sur Mac, le champ ne perdrait jamais le clavier et les ⌘ + clic suivants seraient ignorés.
 const clicks = createClicks({
-  ignore: (p) => videoInspiration || videoActionBusy || !!videoWriting || overOurWindows(p),
+  ignore: (p) => videoInspiration || videoActionBusy || overOurWindows(p),
   onClick: (p, at) => {
+    endVideoWriting();
     const d = screen.getDisplayNearestPoint(p);
     video.onClick({
       displayId: d.id,
@@ -441,15 +445,15 @@ const clicks = createClicks({
       held: true,
     });
   },
-  onNavigate: () => video.onNavigate(),
+  onNavigate: () => {
+    endVideoWriting();
+    video.onNavigate();
+  },
   // Le point est dessiné sur l'écran, pas sur la page : défiler le termine comme un clic seul,
   // après avoir gardé le commentaire en cours d'écriture.
   onScroll: (p) => {
     if (!videoFeedbackState?.click || videoInspiration || videoActionBusy || overOurWindows(p)) return;
-    if (videoWriting) {
-      videoWriting.navigate = true;
-      return videoFeedback.endWriting();
-    }
+    endVideoWriting();
     video.onNavigate();
   },
   onArmed: (armed) => {
@@ -523,7 +527,7 @@ function finishVideo(): Promise<VideoSummary> {
     clicks.stop();
     if (videoInspiration && capture?.isBusy()) capture.cancel();
     cancelVideoInspiration();
-    videoWriting = null;
+    endVideoWriting(); // le texte en cours rejoint son point avant la fin
     videoFeedback.stop();
     const summary = await video.stop();
     videoWindow.stop();
@@ -1322,7 +1326,7 @@ ipcMain.handle('video:action', async (e, action: VideoAction) => {
   // Le point n'est enregistré qu'avec le texte : Échap sans avoir parlé ne laisse pas de point vide.
   if (action === 'write') {
     video.pause();
-    videoWriting = { point: !!videoFeedbackState?.click };
+    videoWriting = { point: !!videoFeedbackState?.click, text: '' };
     videoFeedback.focus(e.sender.id);
     return refreshVideoFeedback();
   }
@@ -1356,19 +1360,29 @@ ipcMain.handle('video:action', async (e, action: VideoAction) => {
   }
 });
 
-// Fin du commentaire écrit (Entrée ou clic ailleurs) : le texte s'ajoute au point ou à une nouvelle remarque.
-ipcMain.handle('video:text', async (e, text: string | null) => {
+ipcMain.on('video:draft', (e, text: string) => {
+  if (videoFeedback.owns(e.sender.id) && videoWriting) videoWriting.text = text;
+});
+// Fin du commentaire écrit par le champ (Entrée, Échap : null, ou champ quitté).
+ipcMain.handle('video:text', (e, text: string | null) => {
+  if (videoFeedback.owns(e.sender.id)) endVideoWriting(text);
+});
+
+/** Fin du commentaire écrit (par défaut avec le texte tapé jusque-là) : il s'ajoute au point ou à une nouvelle remarque.
+ * Le point est retenu tout de suite, avant que le clic ou le défilement qui suit ne le termine. */
+function endVideoWriting(text = videoWriting?.text ?? null) {
   const target = videoWriting;
-  if (!videoFeedback.owns(e.sender.id) || !target) return;
+  if (!target) return;
   videoWriting = null;
   videoFeedback.release();
   video.resume();
   const typed = text?.trim();
-  // Le point en cours est retenu avant qu'un défilement ne le termine.
   const saving = typed && target.point ? video.currentPoint() : undefined;
-  if (target.navigate) video.onNavigate(); // défilement pendant l'écriture : le point se termine aussi
   refreshVideoFeedback();
-  if (!typed) return;
+  if (typed) void addVideoText(typed, saving);
+}
+
+async function addVideoText(typed: string, saving: Promise<VideoPoint | null> | undefined) {
   const point = saving && (await saving);
   if (saving && !point) {
     videoActionError = T.videoFeedback.pointUnavailable;
@@ -1385,7 +1399,7 @@ ipcMain.handle('video:text', async (e, text: string | null) => {
     },
     { undoable: true },
   );
-});
+}
 
 ipcMain.handle('session:get', () => store.get());
 ipcMain.handle('annotation:add', (_e, captureId: string, geometry: Geometry) => store.addAnnotation(captureId, geometry));

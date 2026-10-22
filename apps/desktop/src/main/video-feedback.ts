@@ -101,18 +101,16 @@ export function createVideoFeedback(opts: {
     w.win.setFocusable(true);
     if (process.platform === 'darwin') app.focus({ steal: true });
     w.win.focus();
+    // Sur Mac, une fenêtre qui n'avait jamais eu le clavier ne le passe pas à sa page : sans cela, les lettres
+    // tapées après ⌘ + clic n'arrivaient pas dans le champ.
+    w.win.webContents.focus();
   }
   const focus = (senderId: number) => take(fromWindow(senderId));
   const focusDisplay = (displayId: number) => take(windows.find((w) => w.displayId === displayId && !w.win.isDestroyed()));
-  /** Fin d'un commentaire écrit lancée d'ici (défilement) : le bandeau envoie son texte. */
-  function endWriting() {
-    const w = writerId === null ? undefined : fromWindow(writerId);
-    w?.win.webContents.send('video:end-writing');
-  }
   function release() {
     writerId = null;
     for (const { win } of windows) if (!win.isDestroyed() && win.isFocusable()) win.setFocusable(false);
   }
 
-  return { start, stop, update, focus, focusDisplay, endWriting, release, pointerInControls: () => hoveredId !== null, owns: (senderId: number) => !!fromWindow(senderId), isWindow: (win: BrowserWindow) => windows.some((w) => w.win === win) };
+  return { start, stop, update, focus, focusDisplay, release, pointerInControls: () => hoveredId !== null, owns: (senderId: number) => !!fromWindow(senderId), isWindow: (win: BrowserWindow) => windows.some((w) => w.win === win) };
 }

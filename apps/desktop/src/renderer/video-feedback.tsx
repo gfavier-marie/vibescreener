@@ -1,5 +1,5 @@
 // Même pastille et même onde que dans l'éditeur, superposées à l'app qu'on commente.
-import { useEffect, useRef, useState } from 'react';
+import { useEffect, useRef, useState, type PointerEvent as ReactPointerEvent } from 'react';
 import { createRoot } from 'react-dom/client';
 import { drawAnnotations, type Annotation, type Ctx2D } from '@pastille/shared';
 import type { VideoFeedback } from '../ipc.ts';
@@ -7,19 +7,71 @@ import { Wave, WAVE_BARS, clock } from './dictation-feedback.tsx';
 import { T } from './texts.ts';
 import * as I from './icons.tsx';
 
+// Place du bandeau déplacé : centre et bas, en 0–1 de l'écran ; la même pour tous les écrans et les vidéos suivantes.
+type BarPosition = { x: number; y: number };
+const POSITION_KEY = 'video-bar-position';
+function readPosition(): BarPosition | null {
+  try {
+    const p = JSON.parse(localStorage.getItem(POSITION_KEY) ?? 'null') as BarPosition | null;
+    return p && typeof p.x === 'number' && typeof p.y === 'number' ? p : null;
+  } catch {
+    return null;
+  }
+}
+const clamp = (v: number, min: number, max: number) => Math.min(Math.max(v, min), Math.max(min, max));
+
 function App() {
   const [state, setState] = useState<VideoFeedback>(null);
+  const [position, setPosition] = useState(readPosition);
+  useEffect(() => {
+    const sync = (e: StorageEvent) => { if (e.key === POSITION_KEY) setPosition(readPosition()); }; // déplacé sur un autre écran
+    window.addEventListener('storage', sync);
+    return () => window.removeEventListener('storage', sync);
+  }, []);
+  /** On saisit le bandeau par son en-tête (hors boutons) pour le déplacer. */
+  function drag(e: ReactPointerEvent<HTMLDivElement>) {
+    if (e.button !== 0 || (e.target as HTMLElement).closest('button')) return;
+    const head = e.currentTarget;
+    const box = head.parentElement!.getBoundingClientRect();
+    const start = { x: e.clientX, y: e.clientY, center: box.left + box.width / 2, bottom: box.bottom };
+    let moved: BarPosition | null = null;
+    head.setPointerCapture(e.pointerId);
+    const move = (ev: PointerEvent) => {
+      const w = window.innerWidth, h = window.innerHeight;
+      const center = clamp(start.center + ev.clientX - start.x, box.width / 2, w - box.width / 2);
+      const bottom = clamp(start.bottom + ev.clientY - start.y, box.height, h);
+      setPosition(moved = { x: center / w, y: bottom / h });
+    };
+    const end = () => {
+      head.removeEventListener('pointermove', move);
+      head.removeEventListener('pointerup', end);
+      head.removeEventListener('pointercancel', end);
+      if (!moved) return;
+      try { localStorage.setItem(POSITION_KEY, JSON.stringify(moved)); } catch {} // pas gardée : elle revient en bas au prochain lancement
+    };
+    head.addEventListener('pointermove', move);
+    head.addEventListener('pointerup', end);
+    head.addEventListener('pointercancel', end);
+  }
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const levels = useRef<number[]>([]);
   const lastClick = useRef<VideoFeedback>(null);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const fieldRef = useRef<HTMLTextAreaElement>(null);
-  const written = useRef(false); // le commentaire écrit n'est envoyé qu'une fois (Entrée, Échap ou clic ailleurs)
+  const written = useRef(true); // le commentaire écrit n'est envoyé qu'une fois (Entrée, Échap ou champ quitté)
+  // Écriture ouverte : le texte suit chaque frappe dans le processus principal, qui la termine aussi lui-même
+  // (⌘ + clic, clic ou défilement ailleurs) ; le champ se vide alors ici.
   useEffect(() => {
-    if (!state?.writing) return;
-    written.current = false;
-    fieldRef.current?.focus();
+    const field = fieldRef.current;
+    if (state?.writing) {
+      written.current = false;
+      field?.focus();
+      if (field) window.pastille.videoDraft(field.value);
+    } else if (!written.current) {
+      written.current = true;
+      if (field) field.value = '';
+    }
   }, [state?.writing]);
   // Point posé : le champ est prêt, la fenêtre prend le clavier (video-feedback.ts) ; la première lettre lance l'écriture.
   const clickAt = state?.click?.at;
@@ -28,7 +80,6 @@ function App() {
     fieldRef.current.value = '';
     fieldRef.current.focus();
   }, [clickAt]);
-  useEffect(() => window.pastille.onVideoEndWriting(() => finishWriting(fieldRef.current?.value ?? null)), []);
   function finishWriting(text: string | null) {
     if (written.current) return;
     written.current = true;
@@ -102,8 +153,9 @@ function App() {
     : (state?.voiced ? T.editor.recording : c ? (state?.kept ? '' : v.speak) : v.microphone);
   return <>
     <canvas ref={canvasRef} aria-hidden="true" />
-    {state && <div className={`feedback${state.armed ? ' armed' : ''}${compact ? ' compact' : ''}`} onMouseEnter={() => window.pastille.videoFeedbackHover(true)} onMouseLeave={() => window.pastille.videoFeedbackHover(false)}>
-      <div className="feedback-head">
+    {state && <div className={`feedback${state.armed ? ' armed' : ''}${compact ? ' compact' : ''}`}
+      style={position ? { left: `${position.x * 100}%`, bottom: `${(1 - position.y) * 100}%` } : undefined} onMouseEnter={() => window.pastille.videoFeedbackHover(true)} onMouseLeave={() => window.pastille.videoFeedbackHover(false)}>
+      <div className="feedback-head" title={v.move} onPointerDown={drag}>
         <span className="rec-dot" />
         <strong>{state.inspiration ? v.chooseInspiration : c ? v.point(c.number) : v.general}</strong>
         {!state.inspiration && <>
@@ -135,7 +187,7 @@ function App() {
         {(!compact || c || state.writing) && <textarea ref={fieldRef} className={`feedback-text${state.writing ? ' writing' : ''}`} rows={state.writing ? 2 : 1}
           readOnly={!state.writing && !c} placeholder={v.writePlaceholder}
           onMouseDown={(e) => { if (!state.writing) { e.preventDefault(); void act('write'); } }}
-          onInput={() => { if (!state.writing) void act('write'); }}
+          onInput={(e) => { if (state.writing) window.pastille.videoDraft(e.currentTarget.value); else void act('write'); }}
           onKeyDown={(e) => {
             if (!state.writing) { if (e.key === 'Enter') e.preventDefault(); return; } // écriture pas encore ouverte
             if (e.key === 'Enter' && !e.shiftKey && !e.nativeEvent.isComposing) { e.preventDefault(); finishWriting(e.currentTarget.value); }

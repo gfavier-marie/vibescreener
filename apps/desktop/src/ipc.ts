@@ -276,7 +276,7 @@ export type PastilleApi = {
   videoFeedbackHover(inside: boolean): void;
   videoAction(action: VideoAction): Promise<void>;
   videoText(text: string | null): Promise<void>; // fin du commentaire écrit ; null l'annule
-  onVideoEndWriting(cb: () => void): () => void; // la page a défilé : envoyer le commentaire écrit
+  videoDraft(text: string): void; // texte du commentaire écrit, à chaque frappe
   // Fenêtre cachée, mode parcours
   onTourRegion(cb: (region: TourRegion | null) => void): () => void;
   tourThumb(thumb: Uint8Array): void; // vignette de la zone, à chaque image

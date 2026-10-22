@@ -62,6 +62,7 @@ export const de: Texts = {
     useMicrophone: 'Mikro wieder einschalten, um zu diktieren',
     keyboardOnly: `Mikro aus: ${isMac ? '⌘' : 'Strg'} + Klick, dann tippen, oder ins Feld klicken`,
     typeToKeep: 'Kommentar tippen, Eingabe zum Bestätigen',
+    move: 'Ziehen, um die Leiste zu verschieben',
     reduce: 'Leiste verkleinern',
     expand: 'Leiste vergrößern',
     micFailed: (err: string) => `Mikrofon nicht verfügbar: ${err}`,

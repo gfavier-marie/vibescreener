@@ -65,6 +65,7 @@ export const fr = {
     useMicrophone: 'Rallumer le micro pour dicter',
     keyboardOnly: `Micro coupé : ${isMac ? '⌘' : 'Ctrl'} + clic puis tapez, ou cliquez dans le champ`,
     typeToKeep: 'Tapez votre commentaire, Entrée pour valider',
+    move: 'Glisser pour déplacer le bandeau',
     reduce: 'Réduire le bandeau',
     expand: 'Agrandir le bandeau',
     micFailed: (err: string) => `Micro indisponible : ${err}`,

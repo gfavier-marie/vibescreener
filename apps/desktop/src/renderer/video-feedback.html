@@ -17,7 +17,9 @@
         border: 1px solid rgba(255, 255, 255, 0.12); box-shadow: 0 8px 24px rgba(0, 0, 0, 0.28);
         font-size: 13px; white-space: nowrap; pointer-events: auto;
       }
-      .feedback-head { display: flex; align-items: center; gap: 10px; }
+      .feedback-head { display: flex; align-items: center; gap: 10px; cursor: grab; }
+      .feedback-head:active { cursor: grabbing; }
+      .feedback-head button { cursor: default; }
       .feedback-head strong { font-weight: 600; }
       .feedback-head time { font-variant-numeric: tabular-nums; color: #c7c7cc; font-size: 12px; }
       .rec-dot { width: 8px; height: 8px; border-radius: 999px; background: #ff453a; }

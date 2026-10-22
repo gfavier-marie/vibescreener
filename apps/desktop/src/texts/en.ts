@@ -62,6 +62,7 @@ export const en: Texts = {
     useMicrophone: 'Turn the mic back on to dictate',
     keyboardOnly: `Mic off: ${isMac ? '⌘' : 'Ctrl'}-click then type, or click in the field`,
     typeToKeep: 'Type your comment, Enter to confirm',
+    move: 'Drag to move the bar',
     reduce: 'Shrink the bar',
     expand: 'Expand the bar',
     micFailed: (err: string) => `Microphone unavailable: ${err}`,

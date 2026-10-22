@@ -612,4 +612,6 @@ Choix du 19 oct. : **les deux** façons de partager, le fichier d'abord (il sert
 - [x] **Clavier seul** (bureau bruyant) : le bouton du bandeau ferme vraiment le micro (et le rallume), choix gardé (`videoTyping`) ; « Clavier seul » des réglages l'impose, sans bouton, et la vidéo démarre sans micro ; la durée avance sans micro
 - [x] Commentaire écrit : le point n'est enregistré qu'avec le texte (Échap sans avoir parlé ne laisse plus de point vide)
 - [x] Version **0.21.0** (22 oct.)
-- [ ] Essai dans l'app, Mac et Windows : après ⌘ + clic (Ctrl + clic), les lettres tapées vont bien dans le champ du point et pas dans l'app relue (jamais essayé depuis la 0.15.4)
+- [x] Retours du 22 oct. : ⌘ + clic qui ne faisait plus rien après un commentaire tapé (⌘ + clic n'active pas l'app cliquée sur Mac : le champ gardait le clavier et l'écriture ne finissait jamais) ; désormais ⌘ + clic, clic, défilement ou Arrêter terminent le commentaire en gardant le texte (suivi à chaque frappe) ; après ⌘ + clic, la page du bandeau reçoit le clavier (`webContents.focus()`, que la fenêtre seule ne donnait pas sur Mac) ; bandeau déplaçable par son en-tête, place gardée
+- [x] Version **0.21.1** (22 oct.)
+- [ ] Essai dans l'app, Mac et Windows : après ⌘ + clic (Ctrl + clic), les lettres tapées vont bien dans le champ du point et pas dans l'app relue

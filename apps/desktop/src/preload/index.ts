@@ -103,7 +103,7 @@ const api: PastilleApi = {
   videoFeedbackHover: (inside) => ipcRenderer.send('video:feedback-hover', inside),
   videoAction: (action) => ipcRenderer.invoke('video:action', action),
   videoText: (text) => ipcRenderer.invoke('video:text', text),
-  onVideoEndWriting: (cb) => on('video:end-writing', cb),
+  videoDraft: (text) => ipcRenderer.send('video:draft', text),
 
   onTourRegion: (cb) => on('tour:region', cb),
   tourThumb: (thumb) => ipcRenderer.send('tour:thumb', thumb),
