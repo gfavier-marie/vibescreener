@@ -25,7 +25,7 @@ import {
 } from 'electron';
 import { allAnnotations, findAnnotation, findComment, isDocumentSession, markDeleted, isLang, isSkippedPage, parseShareUrl, pickLang, slugify, SHARE_EXT, type Geometry, type Session } from '@pastille/shared';
 import { TOUR_VIDEO_DISPLAY, TOUR_VIDEO_EXTENSIONS } from '../ipc.ts';
-import type { CaptureResult, EditorFocus, ExportFormat, ExportResult, ImportProgress, MenuAction, MenuState, PairingState, SettingsState, SettingsTab, TourRegion, TourVideoProgress, VideoFeedback } from '../ipc.ts';
+import type { CaptureResult, EditorFocus, ExportFormat, ExportResult, ImportProgress, MenuAction, MenuState, PairingState, SettingsState, SettingsTab, TourRegion, TourVideoProgress, VideoAction, VideoFeedback } from '../ipc.ts';
 import { createCapture, followWindow, listWindows, windowTarget, type CapturedImage, type ChosenWindow } from './capture.ts';
 import { createClicks } from './clicks.ts';
 import { createDictation } from './dictation.ts';
@@ -372,8 +372,11 @@ let videoFeedbackState: VideoFeedback = null;
 let videoInspiration = false;
 let videoActionBusy = false;
 let videoArmed = false; // ⌘ / Ctrl tenu
-let videoWriting: { annotationId?: string; navigate?: boolean } | null = null; // commentaire écrit en cours ; sans point : remarque générale
+let videoWriting: { point: boolean; navigate?: boolean } | null = null; // commentaire écrit en cours ; sans point : remarque générale
 let videoActionError: string | undefined;
+// Clavier seul (bureau bruyant) : le micro reste fermé, on tape les commentaires.
+const videoTypingFixed = () => settings.get().commentMode === 'keyboard';
+const videoTyping = () => settings.get().videoTyping || videoTypingFixed();
 function refreshVideoFeedback() {
   videoFeedback.update(videoFeedbackState && {
     ...videoFeedbackState,
@@ -382,6 +385,9 @@ function refreshVideoFeedback() {
     // Pendant une inspiration, ⌘ + clic reste à l'app (ouvrir un onglet, par exemple).
     armed: videoArmed && !videoInspiration && !videoActionBusy && !videoWriting,
     writing: !!videoWriting,
+    compact: settings.get().videoCompact,
+    typing: videoTyping(),
+    typingFixed: videoTypingFixed(),
     stopShortcut: shortcutLabel(VIDEO_SHORTCUT),
     error: videoActionError,
   });
@@ -484,7 +490,7 @@ async function toggleVideo() {
   videoStarting = true;
   try {
     hideEditor(); // on relit son app, pas l'éditeur
-    await videoWindow.start();
+    await videoWindow.start({ audio: !videoTyping() });
     await videoFeedback.start();
     await clicks.start();
     videoActionError = undefined;
@@ -1286,12 +1292,40 @@ async function transcribe(wav: Uint8Array) {
 
 // ——— IPC ———
 
-ipcMain.handle('video:action', async (e, action: 'draw' | 'inspiration' | 'write' | 'capture-inspiration' | 'cancel-inspiration' | 'stop') => {
+ipcMain.handle('video:action', async (e, action: VideoAction) => {
   if (!videoFeedback.owns(e.sender.id) || !video.isRecording()) return;
   // « Arrêter » passe même pendant une autre action ; sans attendre : l'arrêt ferme la fenêtre qui le demande.
   if (action === 'stop') return void stopVideo();
+  if (action === 'compact') {
+    settings.update({ videoCompact: !settings.get().videoCompact });
+    return refreshVideoFeedback();
+  }
   if (videoActionBusy || videoWriting) return;
   videoActionError = undefined;
+  if (action === 'typing') {
+    if (videoTypingFixed()) return;
+    const typing = !settings.get().videoTyping;
+    videoActionBusy = true;
+    refreshVideoFeedback();
+    try {
+      await videoWindow.mic(!typing);
+      settings.update({ videoTyping: typing });
+    } catch (err) {
+      videoActionError = err instanceof Error ? err.message : String(err);
+    } finally {
+      videoActionBusy = false;
+      refreshVideoFeedback();
+    }
+    return;
+  }
+  // Écrire : l'audio s'arrête (la frappe ne compte pas comme de la parole), le champ prend le clavier.
+  // Le point n'est enregistré qu'avec le texte : Échap sans avoir parlé ne laisse pas de point vide.
+  if (action === 'write') {
+    video.pause();
+    videoWriting = { point: !!videoFeedbackState?.click };
+    videoFeedback.focus(e.sender.id);
+    return refreshVideoFeedback();
+  }
   if (action === 'cancel-inspiration') {
     if (!capture.isBusy()) cancelVideoInspiration();
     return;
@@ -1300,22 +1334,18 @@ ipcMain.handle('video:action', async (e, action: 'draw' | 'inspiration' | 'write
     if (videoInspiration && !capture.isBusy()) startCapture();
     return;
   }
-  if (action !== 'draw' && action !== 'inspiration' && action !== 'write') return;
+  if (action !== 'draw' && action !== 'inspiration') return;
   videoActionBusy = true;
-  if (action !== 'draw') video.pause(); // la frappe au clavier ne doit pas compter comme de la parole
+  if (action === 'inspiration') video.pause();
   try {
-    // Sans clic, le commentaire écrit devient une remarque générale.
-    const point = action === 'write' && !videoFeedbackState?.click ? undefined : await video.currentPoint();
-    if (point === null || !video.isRecording()) throw new Error(T.videoFeedback.pointUnavailable);
-    if (point) tablet?.setFocus(point.annotationId);
+    const point = await video.currentPoint();
+    if (!point || !video.isRecording()) throw new Error(T.videoFeedback.pointUnavailable);
+    tablet?.setFocus(point.annotationId);
     if (action === 'draw') {
       if (!tablet?.isConnected()) showPairing();
-    } else if (action === 'inspiration') {
-      inspirationFor = point!.annotationId;
-      videoInspiration = true;
     } else {
-      videoWriting = { annotationId: point?.annotationId };
-      videoFeedback.focus(e.sender.id);
+      inspirationFor = point.annotationId;
+      videoInspiration = true;
     }
   } catch (err) {
     videoActionError = err instanceof Error ? err.message : String(err);
@@ -1333,11 +1363,18 @@ ipcMain.handle('video:text', async (e, text: string | null) => {
   videoWriting = null;
   videoFeedback.release();
   video.resume();
+  const typed = text?.trim();
+  // Le point en cours est retenu avant qu'un défilement ne le termine.
+  const saving = typed && target.point ? video.currentPoint() : undefined;
   if (target.navigate) video.onNavigate(); // défilement pendant l'écriture : le point se termine aussi
   refreshVideoFeedback();
-  const typed = text?.trim();
   if (!typed) return;
-  const id = target.annotationId ?? (await store.addNote());
+  const point = saving && (await saving);
+  if (saving && !point) {
+    videoActionError = T.videoFeedback.pointUnavailable;
+    return refreshVideoFeedback();
+  }
+  const id = point ? point.annotationId : await store.addNote();
   store.update(
     (s) => {
       const c = findComment(s, id);

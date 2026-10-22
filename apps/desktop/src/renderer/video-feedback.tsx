@@ -52,10 +52,19 @@ function App() {
     return () => window.removeEventListener('wheel', block);
   }, []);
 
+  // Sans micro (clavier seul), l'état n'arrive plus dix fois par seconde : la durée avance ici.
+  const receivedAt = useRef(0);
+  const [, tick] = useState(0);
+  useEffect(() => {
+    const timer = setInterval(() => tick((n) => n + 1), 1000);
+    return () => clearInterval(timer);
+  }, []);
+
   useEffect(() => window.pastille.onVideoFeedback((next) => {
+    receivedAt.current = Date.now();
     const previous = lastClick.current?.click;
     if (!next || previous?.at !== next.click?.at) { levels.current = []; setError(null); }
-    levels.current = next ? [...levels.current, next.level].slice(-WAVE_BARS) : [];
+    if (next && !next.typing) levels.current = [...levels.current, next.level].slice(-WAVE_BARS);
     lastClick.current = next;
     setState(next);
     if (!next) window.pastille.videoFeedbackHover(false);
@@ -86,15 +95,30 @@ function App() {
 
   const v = T.videoFeedback;
   const c = state?.click;
+  // Pastille réduite : en-tête seul, puis le champ quand un point est posé ; aides et touches masquées.
+  const compact = !!state?.compact && !state.inspiration;
+  const status = state?.typing
+    ? (c ? (state.kept ? '' : v.typeToKeep) : v.keyboardOnly)
+    : (state?.voiced ? T.editor.recording : c ? (state?.kept ? '' : v.speak) : v.microphone);
   return <>
     <canvas ref={canvasRef} aria-hidden="true" />
-    {state && <div className={`feedback${state.armed ? ' armed' : ''}`} onMouseEnter={() => window.pastille.videoFeedbackHover(true)} onMouseLeave={() => window.pastille.videoFeedbackHover(false)}>
+    {state && <div className={`feedback${state.armed ? ' armed' : ''}${compact ? ' compact' : ''}`} onMouseEnter={() => window.pastille.videoFeedbackHover(true)} onMouseLeave={() => window.pastille.videoFeedbackHover(false)}>
       <div className="feedback-head">
         <span className="rec-dot" />
         <strong>{state.inspiration ? v.chooseInspiration : c ? v.point(c.number) : v.general}</strong>
-        {!state.inspiration && <><Wave levels={levels.current} /><time>{clock(state.elapsedMs)}</time></>}
-        <button type="button" className="stop" onClick={() => void window.pastille.videoAction('stop')}>
-          <I.Stop size={13} />{v.stop}{state.stopShortcut && <kbd>{state.stopShortcut}</kbd>}
+        {!state.inspiration && <>
+          {state.typing ? <span className="spacer" /> : <Wave levels={levels.current} />}
+          <time>{clock(state.elapsedMs + Date.now() - receivedAt.current)}</time>
+          {!state.typingFixed && <button type="button" className="toggle" aria-pressed={!!state.typing} disabled={busy || state.writing}
+            title={state.typing ? v.useMicrophone : v.useKeyboard} onClick={() => void act('typing')}>
+            <I.Keyboard size={13} /><span className="label">{v.keyboard}</span>
+          </button>}
+          <button type="button" className="toggle" title={compact ? v.expand : v.reduce} onClick={() => void window.pastille.videoAction('compact')}>
+            <I.ChevronDown size={13} className={compact ? 'up' : undefined} />
+          </button>
+        </>}
+        <button type="button" className="stop" title={`${v.stop}${state.stopShortcut ? ` (${state.stopShortcut})` : ''}`} onClick={() => void window.pastille.videoAction('stop')}>
+          <I.Stop size={13} /><span className="label">{v.stop}</span>{state.stopShortcut && <kbd>{state.stopShortcut}</kbd>}
         </button>
       </div>
       {state.inspiration ? <>
@@ -104,10 +128,11 @@ function App() {
           <button type="button" disabled={busy} onClick={() => void act('cancel-inspiration')}>{v.resume}</button>
         </div>
       </> : <>
-        {!state.writing && <div className="feedback-meta" role="status">{state.voiced ? T.editor.recording : c ? (state.kept ? '' : v.speak) : v.microphone}</div>}
-        {/* Champ toujours là, comme la bulle du mode capture. Sans point, la fenêtre ne prend pas le clavier
-            (l'app relue le garde) : un clic dans le champ le demande, puis on tape. Après un point, on tape directement. */}
-        <textarea ref={fieldRef} className={`feedback-text${state.writing ? ' writing' : ''}`} rows={state.writing ? 2 : 1}
+        {!state.writing && !compact && <div className="feedback-meta" role="status">{status}</div>}
+        {/* Champ toujours là (réduit : seulement avec un point), comme la bulle du mode capture. Sans point, la fenêtre
+            ne prend pas le clavier (l'app relue le garde) : un clic dans le champ le demande, puis on tape.
+            Après un point, on tape directement. */}
+        {(!compact || c || state.writing) && <textarea ref={fieldRef} className={`feedback-text${state.writing ? ' writing' : ''}`} rows={state.writing ? 2 : 1}
           readOnly={!state.writing && !c} placeholder={v.writePlaceholder}
           onMouseDown={(e) => { if (!state.writing) { e.preventDefault(); void act('write'); } }}
           onInput={() => { if (!state.writing) void act('write'); }}
@@ -116,18 +141,20 @@ function App() {
             if (e.key === 'Enter' && !e.shiftKey && !e.nativeEvent.isComposing) { e.preventDefault(); finishWriting(e.currentTarget.value); }
             else if (e.key === 'Escape') finishWriting(null);
           }}
-          onBlur={(e) => { if (state.writing) finishWriting(e.currentTarget.value); }} />
+          onBlur={(e) => { if (state.writing) finishWriting(e.currentTarget.value); }} />}
         {state.writing ? <div className="feedback-hint">{v.writeHint}</div> : <>
           {c && <div className="feedback-tools">
-            <button type="button" disabled={busy} title={state.tablet ? v.drawingReady : T.menu.pair} onClick={() => void act('draw')}><I.Tablet size={13} />{v.drawing}</button>
-            <button type="button" disabled={busy} onClick={() => void act('inspiration')}><I.Picture size={13} />{T.editor.inspiration}</button>
+            <button type="button" disabled={busy} title={state.tablet ? v.drawingReady : T.menu.pair} onClick={() => void act('draw')}><I.Tablet size={13} /><span className="label">{v.drawing}</span></button>
+            <button type="button" disabled={busy} title={T.editor.inspiration} onClick={() => void act('inspiration')}><I.Picture size={13} /><span className="label">{T.editor.inspiration}</span></button>
           </div>}
-          <div className="feedback-keys">
-            <span><kbd className="point-key">{v.key}</kbd> + <kbd>{v.click}</kbd> → {v.placePoint}</span>
-            <span className="sep">·</span>
-            <span><kbd>{v.click}</kbd> → {v.navigate}</span>
-          </div>
-          <div className="feedback-hint">{v.gestures}</div>
+          {!compact && <>
+            <div className="feedback-keys">
+              <span><kbd className="point-key">{v.key}</kbd> + <kbd>{v.click}</kbd> → {v.placePoint}</span>
+              <span className="sep">·</span>
+              <span><kbd>{v.click}</kbd> → {v.navigate}</span>
+            </div>
+            <div className="feedback-hint">{v.gestures}</div>
+          </>}
         </>}
       </>}
       {(state.error || error) && <div className="feedback-error" role="alert">{state.error || error}</div>}

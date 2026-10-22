@@ -28,6 +28,8 @@ export function createVideoWindow(opts: VideoWindowOptions) {
   const fromWindow = (sender: Electron.WebContents) => !!win && !win.isDestroyed() && sender === win.webContents;
   ipcMain.on('video:started', (e, error?: string) => fromWindow(e.sender) && started?.(error));
   ipcMain.on('video:audio', (e, chunk: Float32Array) => fromWindow(e.sender) && opts.onAudio(chunk));
+  let micDone: ((error?: string) => void) | null = null;
+  ipcMain.on('video:mic-done', (e, error?: string) => fromWindow(e.sender) && micDone?.(error));
   ipcMain.on('video:cropped', (_e, frameId: number, image: VideoImage | null) => {
     waiting.get(frameId)?.(image);
     waiting.delete(frameId);
@@ -106,6 +108,18 @@ export function createVideoWindow(opts: VideoWindowOptions) {
 
   const send = (channel: string, data: unknown) => win && !win.isDestroyed() && win.webContents.send(channel, data);
 
+  /** Coupe ou rallume le micro pendant l'enregistrement ; rejette avec un message à montrer. */
+  async function mic(on: boolean): Promise<void> {
+    if (!win || win.isDestroyed()) return;
+    const error = await new Promise<string | undefined>((resolve) => {
+      micDone = resolve;
+      send('video:mic', on);
+      setTimeout(() => resolve(T.main.video.noResponse), 15_000);
+    });
+    micDone = null;
+    if (error) throw new Error(T.videoFeedback.micFailed(error));
+  }
+
   /** Mode parcours : zone suivie, dont la fenêtre envoie une vignette à chaque image. */
   const tourRegion = (region: TourRegion | null) => send('tour:region', region);
 
@@ -144,5 +158,5 @@ export function createVideoWindow(opts: VideoWindowOptions) {
     composing.clear();
   }
 
-  return { start, freeze, crop, stop, tourRegion, tourGrab, tourKeep, tourRelease, tourCompose };
+  return { start, freeze, crop, mic, stop, tourRegion, tourGrab, tourKeep, tourRelease, tourCompose };
 }

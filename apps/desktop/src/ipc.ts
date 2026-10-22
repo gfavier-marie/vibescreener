@@ -45,8 +45,13 @@ export type VideoFeedback = {
   tablet?: boolean;
   armed?: boolean; // ⌘ / Ctrl tenu : le prochain clic pose un point
   writing?: boolean; // commentaire écrit en cours (point ou remarque générale), audio suspendu
+  compact?: boolean; // bandeau réduit à une pastille
+  typing?: boolean; // clavier seul : micro coupé
+  typingFixed?: boolean; // clavier seul choisi dans les réglages : pas de bouton pour rallumer le micro
   error?: string;
 } | null;
+
+export type VideoAction = 'draw' | 'inspiration' | 'write' | 'capture-inspiration' | 'cancel-inspiration' | 'stop' | 'compact' | 'typing';
 
 /** Image figée au clic, recadrée sur la cible : rectangle en 0–1 de l'écran ; null la jette. */
 export type VideoCrop = { frameId: number; rect: { x: number; y: number; width: number; height: number } | null };
@@ -265,9 +270,11 @@ export type PastilleApi = {
   onVideoCrop(cb: (c: VideoCrop) => void): () => void;
   videoCropped(frameId: number, image: VideoImage | null): void;
   videoAudio(chunk: Float32Array): void; // micro, blocs de 100 ms à 16 kHz
+  onVideoMic(cb: (on: boolean) => void): () => void; // clavier seul : couper ou rallumer le micro
+  videoMicDone(error?: string): void;
   onVideoFeedback(cb: (state: VideoFeedback) => void): () => void;
   videoFeedbackHover(inside: boolean): void;
-  videoAction(action: 'draw' | 'inspiration' | 'write' | 'capture-inspiration' | 'cancel-inspiration' | 'stop'): Promise<void>;
+  videoAction(action: VideoAction): Promise<void>;
   videoText(text: string | null): Promise<void>; // fin du commentaire écrit ; null l'annule
   onVideoEndWriting(cb: () => void): () => void; // la page a défilé : envoyer le commentaire écrit
   // Fenêtre cachée, mode parcours

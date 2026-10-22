@@ -190,17 +190,43 @@ async function play(file: Uint8Array) {
 }
 
 /** Micro → PCM 16 kHz mono, comme la dictée de l'éditeur (même AudioWorklet). */
+let mic: { audio: AudioContext; stream: MediaStream } | null = null;
 async function listen() {
+  if (mic) return;
   const audio = new AudioContext({ sampleRate: 16000 });
-  await audio.audioWorklet.addModule(new URL('./pcm-worklet.js', document.baseURI).href);
-  const stream = await navigator.mediaDevices.getUserMedia({
-    audio: { channelCount: 1, echoCancellation: true, noiseSuppression: true, autoGainControl: true },
-  });
-  const node = new AudioWorkletNode(audio, 'pcm-capture');
-  node.port.onmessage = (e: MessageEvent<Float32Array>) => api.videoAudio(e.data);
-  audio.createMediaStreamSource(stream).connect(node);
-  node.connect(audio.destination); // le nœud ne produit que du silence
+  try {
+    await audio.audioWorklet.addModule(new URL('./pcm-worklet.js', document.baseURI).href);
+    const stream = await navigator.mediaDevices.getUserMedia({
+      audio: { channelCount: 1, echoCancellation: true, noiseSuppression: true, autoGainControl: true },
+    });
+    const node = new AudioWorkletNode(audio, 'pcm-capture');
+    node.port.onmessage = (e: MessageEvent<Float32Array>) => api.videoAudio(e.data);
+    audio.createMediaStreamSource(stream).connect(node);
+    node.connect(audio.destination); // le nœud ne produit que du silence
+    mic = { audio, stream };
+  } catch (err) {
+    void audio.close();
+    throw err;
+  }
 }
+
+/** Clavier seul : le micro se ferme vraiment (voyant du système éteint). */
+function mute() {
+  if (!mic) return;
+  for (const t of mic.stream.getTracks()) t.stop();
+  void mic.audio.close();
+  mic = null;
+}
+
+api.onVideoMic(async (on) => {
+  try {
+    if (on) await listen();
+    else mute();
+    api.videoMicDone();
+  } catch (err) {
+    api.videoMicDone(String(err));
+  }
+});
 
 api.onVideoStart(async ({ sources, audio, file }) => {
   try {

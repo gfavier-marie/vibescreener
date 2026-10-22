@@ -26,6 +26,8 @@ export type Settings = {
   mcpSeenAt: string; // dernière connexion de Claude Code au serveur MCP (ISO), vide si jamais
   updatingTo: string; // version visée par une mise à jour lancée depuis l'app, vérifiée au lancement suivant
   authorName: string; // « Votre nom » : signe les points et remarques, vu par les autres dans un projet partagé
+  videoCompact: boolean; // mode vidéo : bandeau réduit à une pastille
+  videoTyping: boolean; // mode vidéo : clavier seul, micro coupé (bureau bruyant)
 };
 
 /** Ce que voit la fenêtre de réglages : jamais la clé elle-même. */
@@ -59,6 +61,8 @@ export function createSettings(dataDir: string, documentsDir: string, lang: { sy
     mcpSeenAt: '',
     updatingTo: '',
     authorName: '',
+    videoCompact: false,
+    videoTyping: false,
   };
   const existed = existsSync(path);
   const stored = existed ? (JSON.parse(readFileSync(path, 'utf8')) as Partial<Settings> & { apiKey?: string }) : {};

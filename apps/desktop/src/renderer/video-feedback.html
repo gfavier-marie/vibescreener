@@ -49,6 +49,21 @@
       .feedback-text:hover { border-color: rgba(255, 255, 255, 0.3); }
       .feedback-text.writing { border-color: var(--accent); }
       .feedback-error { max-width: 380px; white-space: normal; color: #ffb4ab; font-size: 12px; }
+      .feedback-head .spacer { flex: 1; min-width: 24px; }
+      .feedback button.toggle { padding: 0 8px; color: #e5e5ea; }
+      .feedback button.toggle[aria-pressed='true'] { background: var(--accent); border-color: var(--accent); color: #fff; }
+      .feedback button.toggle .up { transform: rotate(180deg); }
+      /* Pastille réduite : en-tête serré, icônes sans libellé ; le champ n'apparaît qu'avec un point. */
+      .feedback.compact { gap: 6px; padding: 6px 8px 6px 12px; border-radius: 12px; }
+      .feedback.compact .feedback-head { gap: 8px; }
+      .feedback.compact .wave { flex: none; min-width: 0; gap: 2px; }
+      .feedback.compact .wave span { width: 2px; }
+      .feedback.compact .spacer { display: none; }
+      .feedback.compact button { height: 26px; padding: 0 7px; }
+      .feedback.compact button.stop { margin-left: 0; }
+      .feedback.compact .label, .feedback.compact button.stop kbd { display: none; }
+      .feedback.compact .feedback-text { width: 280px; padding: 6px 8px; }
+      .feedback.compact .feedback-tools { gap: 6px; }
     </style>
   </head>
   <body>

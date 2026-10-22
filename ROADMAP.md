@@ -605,3 +605,11 @@ Choix du 19 oct. : **les deux** façons de partager, le fichier d'abord (il sert
 - [ ] Essai dans l'app : partage, nom, menu Nouveau, vignettes réduites, éditeur vide
 - [x] Correctif 0.18.1 (20 oct.) : en-tête de l'éditeur coupé (Exporter hors de l'écran) quand la bande de vignettes était plus large que la fenêtre ; en fenêtre étroite, titres raccourcis, boutons entiers sur une ligne
 
+
+## Mode vidéo : bandeau réduit et clavier seul (demandé le 22 oct. 2026)
+
+- [x] Bandeau réductible (⌄ dans l'en-tête) en pastille : point, onde, durée, Clavier seul, Arrêter ; le champ n'apparaît qu'avec un point (outils en icônes), aides et touches masquées ; choix gardé (`videoCompact`)
+- [x] **Clavier seul** (bureau bruyant) : le bouton du bandeau ferme vraiment le micro (et le rallume), choix gardé (`videoTyping`) ; « Clavier seul » des réglages l'impose, sans bouton, et la vidéo démarre sans micro ; la durée avance sans micro
+- [x] Commentaire écrit : le point n'est enregistré qu'avec le texte (Échap sans avoir parlé ne laisse plus de point vide)
+- [x] Version **0.21.0** (22 oct.)
+- [ ] Essai dans l'app, Mac et Windows : après ⌘ + clic (Ctrl + clic), les lettres tapées vont bien dans le champ du point et pas dans l'app relue (jamais essayé depuis la 0.15.4)
