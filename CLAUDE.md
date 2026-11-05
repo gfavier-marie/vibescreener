@@ -24,8 +24,8 @@ Outil de revue d'interface : raccourci → capture → points numérotés dicté
 - `pnpm dev` : lance l'app desktop.
 - `pnpm bench:dictee` : mesure de transcription sur `apps/desktop/fixtures/dictee-fr.wav`.
 - `pnpm relay` (relais + PWA en local, port 8787) et `pnpm bench:synchro [url]` (QR d'appairage + aller-retour). L'app desktop vise `PASTILLE_RELAY`, sinon `http://localhost:8787` en développement et le relais partagé `https://relay.vibescreener.dev` une fois installée (`pnpm relay:deploy` le met à jour ; le même Worker répond aussi sur `https://pastille.vibescreener.workers.dev`, à garder pour les apps et tablettes appairées avant).
-- `pnpm site` / `pnpm site:deploy` : site public statique (`apps/site`, landing, tarifs, pages légales) en cinq langues : modèles `src/*.html` aux textes `{{groupe.clé}}` tirés de `src/i18n/`, produits dans `dist/` par `build.ts` (français à la racine, `/en/`, `/es/`, `/de/`, `/it/`).
-- Licence (`src/main/license.ts`) : essai de `TRIAL_DAYS` jours, puis clé Polar activée et vérifiée par l'API publique de Polar ; seules les nouvelles captures sont bloquées sans licence. Essais : `PASTILLE_TRIAL_DAYS=0`, `PASTILLE_POLAR=sandbox`. Domaine provisoire `vibescreener.dev` (à remplacer partout une fois acheté).
+- `pnpm site` / `pnpm site:deploy` : site public statique (`apps/site`, landing, pages légales) en cinq langues : modèles `src/*.html` aux textes `{{groupe.clé}}` tirés de `src/i18n/`, produits dans `dist/` par `build.ts` (français à la racine, `/en/`, `/es/`, `/de/`, `/it/`).
+- App gratuite depuis le 5 nov. 2026 : ni essai, ni licence, ni paiement (le module Polar a été retiré). Domaine provisoire `vibescreener.dev` (à remplacer partout une fois acheté).
 - `pnpm test`, `pnpm typecheck`, `pnpm e2e` (session factice → photo de l'éditeur + exports, dans `e2e-output/`).
 - Fenêtre de mesures du lot 0 : `PASTILLE_POC=1 pnpm dev`.
 - Claude Code : `claude mcp add --transport http --scope user vibescreener http://127.0.0.1:3917/mcp` (serveur MCP de l'app, `src/main/mcp.ts`, VibeScreener lancée).

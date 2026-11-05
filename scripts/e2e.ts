@@ -1,7 +1,7 @@
 // Test de bout en bout : session factice (5 captures, 20 points), dictée sur le point #1
 // par un faux micro qui joue l'échantillon, photo de l'éditeur, export PDF et Markdown, écran 1 lu par le
 // serveur MCP ; puis un PDF, un Word, un PowerPoint et un Excel ouverts, commentés et exportés (copie commentée). Résultats dans e2e-output/ (editor.png, editor-notes.png, projects.png, settings.png, settings-claude.png,
-// settings-license.png, menu, barre, overlay normal et d'inspiration, assistant, appairage ; chemins des exports).
+// menu, barre, overlay normal et d'inspiration, assistant, appairage ; chemins des exports).
 // Usage : pnpm e2e
 // App installée (CI Windows) : PASTILLE_E2E_APP=…\VibeScreener.exe, avec PASTILLE_FAKE_AUDIO et
 // PASTILLE_WHISPER_MODEL (l'échantillon et le modèle ne sont pas dans l'app).

@@ -4,8 +4,8 @@
 // la rouvre. Sans signature Apple, macOS redemande ensuite l'enregistrement de l'écran, le micro et
 // l'Accessibilité (limite de plateforme, voir install.sh). PASTILLE_DOWNLOADS vise un autre bucket (essais).
 
-import { SITE_URL } from './license.ts';
-
+// Domaine provisoire (M0) : à remplacer partout par le domaine acheté.
+const SITE_URL = 'https://vibescreener.dev';
 const DOWNLOADS = process.env.PASTILLE_DOWNLOADS ?? 'https://dl.vibescreener.dev'; // domaine provisoire (M0)
 
 export type Update = { version: string };

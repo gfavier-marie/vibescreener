@@ -115,6 +115,8 @@ Maquette : [canvas « Pastille — design »](https://claude.ai/artifact/UDWBtfF
 
 ## Monétisation (demandé le 6 oct. 2026)
 
+*Abandonnée le 5 nov. 2026 : l'app est gratuite, voir « Passage en gratuit » en fin de fichier.*
+
 Essai gratuit puis licence, le plus simplement possible : **Polar** encaisse (vendeur officiel, TVA, factures) et délivre une clé de licence que l'app active et vérifie directement par l'API publique de Polar, **sans serveur ni base de données à nous**. Achat unique ou abonnement : même code dans l'app (Polar révoque la clé d'un abonnement résilié), le modèle se choisit dans Polar et sur la page Tarifs. Après l'essai (`TRIAL_DAYS`, 14 jours par défaut, sans carte), seules les **nouvelles captures** sont bloquées ; sessions, exports et Claude Code restent accessibles. Dépôt **privé** ; téléchargements et mises à jour sur Cloudflare.
 
 Adresses (domaine **vibescreener.dev**, acheté sur Cloudflare le 6 oct.) : `<domaine>` site, `relay.<domaine>` relais + PWA (même Worker que `pastille.vibescreener.workers.dev`, gardé : mêmes rooms, rien ne casse), `dl.<domaine>` bucket R2 (`latest.json`, `install.sh`, .dmg).
@@ -615,3 +617,12 @@ Choix du 19 oct. : **les deux** façons de partager, le fichier d'abord (il sert
 - [x] Retours du 22 oct. : ⌘ + clic qui ne faisait plus rien après un commentaire tapé (⌘ + clic n'active pas l'app cliquée sur Mac : le champ gardait le clavier et l'écriture ne finissait jamais) ; désormais ⌘ + clic, clic, défilement ou Arrêter terminent le commentaire en gardant le texte (suivi à chaque frappe) ; après ⌘ + clic, la page du bandeau reçoit le clavier (`webContents.focus()`, que la fenêtre seule ne donnait pas sur Mac) ; bandeau déplaçable par son en-tête, place gardée
 - [x] Version **0.21.1** (22 oct.)
 - [ ] Essai dans l'app, Mac et Windows : après ⌘ + clic (Ctrl + clic), les lettres tapées vont bien dans le champ du point et pas dans l'app relue
+
+## Passage en gratuit (demandé le 5 nov. 2026)
+
+- [x] App : module de licence retiré (`license.ts` et ses tests) ; plus d'essai ni de blocage des captures, vidéos, parcours et documents ; onglet Licence des réglages, ligne d'essai du menu de l'icône et phrase de l'assistant retirés ; la version installée passe en bas de Réglages › Général ; cinq langues
+- [x] Site : section Tarifs et liens de paiement Polar retirés ; « Installer » dans l'en-tête, « Gratuit, sans compte » sous la commande ; FAQ « C'est vraiment gratuit ? » à la place de la fin d'essai et du remboursement ; licence d'utilisation réécrite (gratuite, sans limite d'ordinateurs), vente et achat retirés des mentions légales et de la confidentialité ; cinq langues
+- [ ] Polar (toi) : archiver les deux produits et désactiver leurs liens de paiement ; s'il y a eu des clients, résilier les abonnements en cours et rembourser si besoin
+- [x] Version **0.22.0** (5 nov.)
+- [ ] Publication : push de main et du tag `v0.22.0`, puis `pnpm site:deploy`
+

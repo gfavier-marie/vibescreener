@@ -1,6 +1,6 @@
 // Entrées du menu de l'icône (§4.7), partagées par le popover et le menu ≡ de l'éditeur : les quatre modes
 // (capture d'écran, vidéo, documents, parcours ; dans l'éditeur, ils sont dans son menu Nouveau), export,
-// revues récentes, projets, licence, mise à jour, appairage, réglages, quitter.
+// revues récentes, projets, mise à jour, appairage, réglages, quitter.
 
 import type { MenuAction, MenuState } from '../../ipc.ts';
 import * as I from '../icons.tsx';
@@ -89,14 +89,6 @@ export function MenuItems({ s, act, inEditor = false }: { s: MenuState; act: (a:
       </button>
 
       <hr />
-      {s.license.state !== 'licensed' && (
-        // Essai en cours, ou captures bloquées : ouvre l'onglet Licence des réglages.
-        <button type="button" className={`item ${s.license.state === 'trial' ? '' : 'update'}`} onClick={() => act({ type: 'license' })}>
-          {s.license.state === 'trial' ? <I.Info /> : <I.Warning />}
-          <span>{s.license.state === 'trial' ? T.menu.trial(s.license.daysLeft) : T.menu.license[s.license.state]}</span>
-          <kbd>{T.menu.buy}</kbd>
-        </button>
-      )}
       {s.update && (
         <button type="button" className="item update" onClick={() => act({ type: 'update' })}>
           <I.Download />

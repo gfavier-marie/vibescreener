@@ -45,7 +45,6 @@ import { createSync, readLink } from './sync.ts';
 import { createTablet } from './tablet.ts';
 import QRCode from 'qrcode';
 import { encodeWav, wavDurationMs } from './wav.ts';
-import { createLicense, POLAR, SITE_URL, TRIAL_DAYS } from './license.ts';
 import { createSettings, type Settings } from './settings.ts';
 import { createTranscriber } from './transcriber.ts';
 import { createTour, type TourCheck, type TourSummary } from './tour.ts';
@@ -153,9 +152,6 @@ const tablet = autotest && autotest !== 'tablet'
         refreshVideoFeedback();
       },
     });
-// Essai puis licence Polar. PASTILLE_TRIAL_DAYS raccourcit l'essai et PASTILLE_POLAR=sandbox vise le bac à sable, pour les essais.
-const polar = process.env.PASTILLE_POLAR === 'sandbox' ? POLAR.sandbox : POLAR.production;
-const license = createLicense({ dataDir: app.getPath('userData'), trialDays: Number(process.env.PASTILLE_TRIAL_DAYS ?? TRIAL_DAYS), polar });
 const exportDir = () => (autotest ? join(app.getPath('userData'), 'exports') : settings.get().exportDir);
 const modelDir = join(app.getPath('userData'), 'models');
 // Serveur MCP pour Claude Code : son adresse, ou l'erreur affichée dans les réglages.
@@ -298,11 +294,6 @@ function inspirationTarget() {
 function startCapture() {
   if (videoFinishing || tourChoosing || tour.isRecording()) return; // le parcours ne doit pas voir l'overlay
   if (video.isRecording() && !videoInspiration) return; // une inspiration reste possible pendant la vidéo
-  // Essai fini sans licence : l'onglet Licence s'ouvre à la place. Sessions, exports et Claude Code restent libres.
-  if (!license.canCapture()) {
-    checkLicense(); // licence à revérifier : de nouveau en ligne, peut-être
-    return showSettings('license');
-  }
   welcomeWindow?.webContents.send('welcome:shortcut');
   // Le micro chauffe pendant que l'utilisateur vise : la dictée démarre sans délai au clic.
   if (!inspirationTarget()) editor?.webContents.send('editor:prepare-mic');
@@ -474,10 +465,6 @@ async function toggleVideo() {
   if (videoFinishing) return;
   if (video.isRecording()) return stopVideo();
   if (videoStarting || capture.isBusy() || tourChoosing || tourStarting || tour.isRecording()) return;
-  if (!license.canCapture()) {
-    checkLicense();
-    return showSettings('license');
-  }
   if (!clicks.allowed()) {
     clicks.ask();
     const { response } = await dialog.showMessageBox({
@@ -622,11 +609,6 @@ function toggleTour() {
   if (tourFinishing) return;
   if (tour.isRecording()) return void stopTour();
   if (tourChoosing || tourStarting || videoStarting || videoFinishing || video.isRecording() || capture.isBusy() || documents.isBusy()) return;
-  // Essai fini sans licence : comme une capture, l'onglet Licence s'ouvre à la place.
-  if (!license.canCapture()) {
-    checkLicense();
-    return showSettings('license');
-  }
   tourChoosing = { editorWasOpen: editorOpen };
   hideEditor(); // on parcourt une autre app
   void capture.start('tour');
@@ -692,10 +674,6 @@ const sendImportProgress = (p: ImportProgress) => editor?.webContents.send('edit
 async function importTourVideo(path?: string) {
   if (tourFinishing || tour.isRecording()) return;
   if (tourChoosing || tourStarting || videoStarting || videoFinishing || video.isRecording() || capture.isBusy() || documents.isBusy()) return;
-  if (!license.canCapture()) {
-    checkLicense();
-    return showSettings('license');
-  }
   await finishRecording();
   if (!path) {
     showEditor();
@@ -754,11 +732,6 @@ const documents = createDocuments({
 async function openDocument(path?: string) {
   if (documents.isBusy()) return void dialog.showMessageBox({ type: 'info', message: T.main.document.busy });
   if (capture?.isBusy()) return;
-  // Essai fini sans licence : comme une capture, un nouveau document n'est pas ouvert.
-  if (!license.canCapture()) {
-    checkLicense();
-    return showSettings('license');
-  }
   await finishRecording();
   if (!path) {
     showEditor();
@@ -875,7 +848,6 @@ async function menuState(): Promise<MenuState> {
     tour: tour.isRecording() ? { screens: tour.screens() } : undefined,
     recents,
     update: update?.version,
-    license: license.view(),
   };
 }
 
@@ -946,9 +918,6 @@ function notify(body: string) {
 
 let lastExport: string | null = null;
 
-/** Revérifie la clé auprès de Polar (au plus une fois par jour) et affiche le résultat. */
-const checkLicense = () => void license.refresh().then(broadcastSettings);
-
 function onMenuAction(a: MenuAction) {
   switch (a.type) {
     case 'capture':
@@ -992,8 +961,6 @@ function onMenuAction(a: MenuAction) {
       return void finishRecording().then(() => store.open(a.id)).then(() => exportFromMenu('pdf'));
     case 'update':
       return void confirmUpdate();
-    case 'license':
-      return showSettings('license');
   }
 }
 
@@ -1179,7 +1146,6 @@ function settingsState(): SettingsState {
     tabletPaired: tablet?.isPaired() ?? false,
     tabletConnected: tablet?.isConnected() ?? false,
     mcp: mcpStatus,
-    license: license.view(),
     version: app.getVersion(),
   };
 }
@@ -1246,15 +1212,6 @@ ipcMain.handle('tablet:revoke', async () => {
   broadcastSettings();
 });
 ipcMain.on('tablet:pair', () => showPairing());
-ipcMain.handle('license:activate', async (_e, key: string) => {
-  const r = await license.activate(key);
-  broadcastSettings();
-  return r;
-});
-// Le site français est à la racine, les autres langues dans /en/, /es/…
-ipcMain.on('license:open', (_e, page: 'buy' | 'portal') =>
-  void shell.openExternal(page === 'buy' ? `${SITE_URL}${T.lang === 'fr' ? '' : `/${T.lang}`}/#tarifs` : polar.portal),
-);
 
 /** Nouvelle langue choisie dans les réglages : menu, info-bulle et fenêtres ouvertes passent dans cette langue. */
 function applyLang() {
@@ -1714,9 +1671,6 @@ async function runEditorAutotest() {
   settingsWindow!.webContents.send('settings:tab', 'claude');
   await wait(400);
   await writeFile(join(out, 'settings-claude.png'), (await settingsWindow!.webContents.capturePage()).toPNG());
-  settingsWindow!.webContents.send('settings:tab', 'license');
-  await wait(400);
-  await writeFile(join(out, 'settings-license.png'), (await settingsWindow!.webContents.capturePage()).toPNG());
   await photographScreens(out);
 
   // Documents : un PDF, un Word, un PowerPoint et un Excel ouverts comme sessions (rendu dans l'app installée),
@@ -2033,12 +1987,7 @@ void app.whenReady().then(async () => {
   menubar.start();
   reportUpdate();
   void lookForUpdate();
-  checkLicense();
-  // L'app reste lancée des jours ; la clé n'est revérifiée qu'une fois par jour.
-  setInterval(() => {
-    void lookForUpdate();
-    checkLicense();
-  }, 6 * 3600_000);
+  setInterval(() => void lookForUpdate(), 6 * 3600_000); // l'app reste lancée des jours
   if (process.env.PASTILLE_POC) showPoc(); // fenêtre de mesures du lot 0, hors du menu
   editor = createEditor(); // préchargé pour s'ouvrir sans attendre après une capture
   syncDock(); // en développement, sans LSUIElement : l'icône part si aucune fenêtre ne s'ouvre

@@ -34,9 +34,9 @@ Même rôle que sur Mac, sans droits administrateur : l'app s'installe pour l'ut
 Télécharger [VibeScreener-Setup.exe](https://dl.vibescreener.dev/VibeScreener-Setup.exe) et l'ouvrir. L'installeur n'étant pas signé, Windows affiche « Windows a protégé votre ordinateur » : « Informations complémentaires » > « Exécuter quand même ».
 </details>
 
-## Essai et licence
+## Gratuit
 
-14 jours d'essai gratuit, toutes les fonctions, sans carte bancaire. Ensuite, une licence achetée sur [vibescreener.dev](https://vibescreener.dev/#tarifs) (paiement par Polar) : la clé reçue par e-mail se colle dans Réglages > Licence. Sans licence, les nouvelles captures sont bloquées ; sessions, exports et Claude Code restent accessibles.
+Toutes les fonctions, sans compte ni carte bancaire.
 
 ## Premier lancement
 
@@ -97,7 +97,7 @@ Port pris : les réglages le signalent ; `PASTILLE_MCP_PORT` en choisit un autre
 - Captures, sessions et dictée restent sur l'ordinateur (transcription locale par [whisper.cpp](https://github.com/ggml-org/whisper.cpp)). Le moteur par API, optionnel, envoie l'audio au service choisi.
 - La tablette passe par un relais partagé (Cloudflare) qui ne voit que des messages chiffrés (AES-GCM) : la clé est dans le QR code et ne passe jamais par le serveur.
 - Le serveur MCP n'écoute que sur `127.0.0.1` et refuse les requêtes venant d'un navigateur.
-- Licence : la clé et un identifiant d'installation aléatoire sont envoyés à Polar pour l'activer, puis la vérifier une fois par jour. La recherche de mise à jour lit `dl.vibescreener.dev/latest.json`.
+- La recherche de mise à jour lit `dl.vibescreener.dev/latest.json`.
 
 ## Limites
 
@@ -121,7 +121,7 @@ pnpm dev             # lance l'app (depuis ton propre Terminal sur Mac, pour l'a
 | `pnpm e2e` | Session factice, dictée par un faux micro, photo de l'éditeur et des réglages, exports PDF, Markdown et PowerPoint, lecture d'un écran par le serveur MCP (`e2e-output/`) |
 | `pnpm bench:dictee` | Temps de transcription de 5 s de français |
 | `pnpm relay` | Relais + PWA de la tablette en local (http://localhost:8787), visé par `pnpm dev` |
-| `pnpm site` | Site public (landing, tarifs, pages légales) en local, servi comme sur Cloudflare |
+| `pnpm site` | Site public (landing, pages légales) en local, servi comme sur Cloudflare |
 | `pnpm bench:synchro [url]` | QR d'appairage et aller-retour chiffré desktop ↔ tablette |
 | `pnpm build:whisper-mac` | whisper-server autonome (statique, Metal) pour l'installeur Mac ; nécessite cmake |
 | `pnpm dist` | Installeur de la plateforme courante (`apps/desktop/dist/` ; Windows : `pnpm setup:whisper` avant, pour embarquer whisper-server) |

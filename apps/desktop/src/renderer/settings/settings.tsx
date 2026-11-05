@@ -50,7 +50,6 @@ const TABS: { id: SettingsTab; icon: ReactNode }[] = [
   { id: 'export', icon: <I.Doc size={20} /> },
   { id: 'devices', icon: <I.Tablet size={20} /> },
   { id: 'claude', icon: <I.Terminal size={20} /> },
-  { id: 'license', icon: <I.Lock size={20} /> },
 ];
 
 function App() {
@@ -61,10 +60,6 @@ function App() {
   const [apiKey, setApiKey] = useState('');
   const [listening, setListening] = useState(false);
   const [copied, setCopied] = useState(false);
-  const [licenseKey, setLicenseKey] = useState('');
-  const [changingKey, setChangingKey] = useState(false); // champ de clé rouvert sur une licence active
-  const [activating, setActivating] = useState(false);
-  const [licenseResult, setLicenseResult] = useState<{ ok: boolean; text: string }>();
 
   useEffect(() => {
     void api.getSettings().then(setS);
@@ -96,17 +91,6 @@ function App() {
     const r = await api.downloadModel();
     setDownload(null);
     if (!r.ok) setError(r.error);
-  }
-
-  async function activate() {
-    setActivating(true);
-    const r = await api.activateLicense(licenseKey);
-    setActivating(false);
-    setLicenseResult(r.ok ? { ok: true, text: S.activated } : { ok: false, text: r.error });
-    if (r.ok) {
-      setLicenseKey('');
-      setChangingKey(false);
-    }
   }
 
   const silence = s.silenceMs / 1000;
@@ -231,6 +215,12 @@ function App() {
             <small>{S.floatingBarHint}</small>
           </span>
           <Switch on={s.floatingBar} label={S.floatingBar} onChange={(on) => void update({ floatingBar: on })} />
+        </div>
+      </Section>
+      <Section title="VibeScreener">
+        <div className="row">
+          <span className="label">{S.version}</span>
+          <span className="key">{s.version}</span>
         </div>
       </Section>
     </>
@@ -410,67 +400,6 @@ function App() {
     </Section>
   );
 
-  // Licence : essai ou clé (avec son offre), achat sur le site, activation ou changement de clé, version installée.
-  const L = s.license;
-  const hasKey = L.state === 'licensed' || L.state === 'unverified';
-  const license = (
-    <>
-      <Section title={S.license} hint={<p className="hint">{S.licenseHint}</p>}>
-        <div className="row">
-          <span className="device-icon">{L.state === 'trial' || L.state === 'licensed' ? <I.Lock size={20} /> : <I.Warning size={18} />}</span>
-          <span className="label">
-            <span>
-              {L.state === 'licensed' && L.plan ? S.licensedPlan[L.plan] : S.licenseStates[L.state](L.daysLeft)}
-              {L.key && <span className="key"> · {L.key}</span>}
-            </span>
-            <small>{S.licenseDetails[L.state]}</small>
-          </span>
-          {hasKey && (
-            <button type="button" className="btn" onClick={() => setChangingKey(!changingKey)}>
-              {changingKey ? S.cancel : S.changeKey}
-            </button>
-          )}
-          {hasKey ? (
-            <button type="button" className="btn" onClick={() => api.openLicensePage('portal')}>
-              {S.portal}
-            </button>
-          ) : (
-            <button type="button" className="btn primary" onClick={() => api.openLicensePage('buy')}>
-              {S.buy}
-            </button>
-          )}
-        </div>
-        {(!hasKey || changingKey) && (
-          <div className="row stack">
-            <label htmlFor="license-key">
-              {S.licenseKey} <small className="hint">{S.licenseKeyHint}</small>
-            </label>
-            <span className="field">
-              <input
-                id="license-key"
-                value={licenseKey}
-                spellCheck={false}
-                autoComplete="off"
-                onChange={(e) => setLicenseKey(e.target.value)}
-                onKeyDown={(e) => e.key === 'Enter' && licenseKey.trim() && !activating && void activate()}
-              />
-              <button type="button" className="btn" disabled={!licenseKey.trim() || activating} onClick={() => void activate()}>
-                {activating ? S.activating : S.activate}
-              </button>
-            </span>
-          </div>
-        )}
-      </Section>
-      {licenseResult && <p className={licenseResult.ok ? 'hint ok' : 'error'}>{licenseResult.text}</p>}
-      <Section title="VibeScreener">
-        <div className="row">
-          <span className="label">{S.version}</span>
-          <span className="key">{s.version}</span>
-        </div>
-      </Section>
-    </>
-  );
-
   return (
     <div className={`settings ${isMac ? '' : 'win'}`}>
       <div className="toolbar">
@@ -485,7 +414,7 @@ function App() {
         </div>
       </div>
       <div className="content" role="tabpanel">
-        {{ general, permissions, transcription, export: exportPdf, devices, claude, license }[tab]}
+        {{ general, permissions, transcription, export: exportPdf, devices, claude }[tab]}
       </div>
     </div>
   );

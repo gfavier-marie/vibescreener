@@ -120,9 +120,6 @@ export const fr = {
     settings: 'Réglages…',
     quit: 'Quitter VibeScreener',
     update: (version: string) => `Mettre à jour (version ${version})`,
-    trial: (days: number) => `Essai gratuit : ${plural(days, 'jour restant', 'jours restants')}`,
-    buy: 'Acheter',
-    license: { expired: 'Essai terminé', revoked: 'Licence plus valable', unverified: 'Licence à vérifier' },
     pending: (n: number) => `${plural(n, 'transcription')} en cours`,
     errors: (n: number) => `${plural(n, 'transcription')} en erreur`,
   },
@@ -165,7 +162,7 @@ export const fr = {
   },
 
   settings: {
-    tabs: { general: 'Général', permissions: 'Autorisations', transcription: 'Transcription', export: 'Export PDF', devices: 'Appareils', claude: 'Claude Code', license: 'Licence' },
+    tabs: { general: 'Général', permissions: 'Autorisations', transcription: 'Transcription', export: 'Export PDF', devices: 'Appareils', claude: 'Claude Code' },
     permissions: 'Autorisations du système',
     permissionsHint: isMac
       ? "VibeScreener n'étant pas signée par Apple, macOS les oublie à chaque mise à jour : redonnez-les ici. L'Accessibilité ne sert qu'au mode vidéo."
@@ -245,34 +242,7 @@ export const fr = {
     showQr: 'Afficher le QR',
     pair: 'Appairer…',
     revoke: 'Révoquer',
-    license: 'Licence',
-    licenseStates: {
-      trial: (days: number) => `Essai gratuit : ${plural(days, 'jour restant', 'jours restants')}`,
-      expired: () => 'Essai terminé',
-      licensed: () => 'Licence active',
-      revoked: () => 'Licence plus valable',
-      unverified: () => 'Licence à vérifier',
-    },
-    licenseDetails: {
-      trial: 'Toutes les fonctions, sans carte bancaire.',
-      expired: 'Achetez une licence pour reprendre les captures.',
-      licensed: 'Merci de soutenir VibeScreener !',
-      revoked: 'Abonnement terminé ou achat remboursé.',
-      unverified: 'Polar ne répond plus depuis 30 jours : connectez-vous à Internet.',
-    },
-    buy: 'Acheter',
-    portal: 'Gérer mon achat',
-    changeKey: 'Changer de clé',
-    cancel: 'Annuler',
-    licensedPlan: { lifetime: 'Licence à vie active', subscription: 'Abonnement mensuel actif' },
     version: 'Version installée',
-    licenseKey: 'Clé de licence',
-    licenseKeyHint: "Elle figure dans l'e-mail reçu après l'achat.",
-    activate: 'Activer',
-    activating: 'Activation…',
-    activated: `Licence activée sur ${isMac ? 'ce Mac' : 'cet ordinateur'}.`,
-    licenseHint:
-      'Sans licence, après l’essai, les nouvelles captures sont bloquées. Vos revues, vos exports et Claude Code restent accessibles.',
   },
 
   welcome: {
@@ -322,7 +292,6 @@ export const fr = {
       other: 'Choisir un autre raccourci',
       modes: "Les quatre modes, dans le menu de l'icône :",
     },
-    trial: (days: number) => `Essai gratuit : encore ${plural(days, 'jour')}, toutes les fonctions, sans carte bancaire.`,
   },
 
   pairing: {
@@ -603,14 +572,6 @@ export const fr = {
       window: 'Fenêtre',
       minimize: 'Réduire',
       close: 'Fermer',
-    },
-    license: {
-      emptyKey: 'Collez la clé reçue par e-mail.',
-      notForSale: 'Les licences ne sont pas encore en vente : réessayez bientôt.',
-      offline: 'Polar est injoignable : vérifiez la connexion à Internet.',
-      unknownKey: "Clé inconnue : vérifiez-la dans l'e-mail reçu après l'achat.",
-      refused: `Clé refusée : déjà activée sur le nombre maximal ${isMac ? 'de Mac' : "d'ordinateurs"}, révoquée ou expirée.`,
-      polarError: (status: number) => `Polar ne répond pas correctement (erreur ${status}) : réessayez plus tard.`,
     },
     whisper: {
       modelMissing: 'Modèle Whisper absent : téléchargez-le dans les réglages.',

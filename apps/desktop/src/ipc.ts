@@ -1,13 +1,12 @@
 // Contrat IPC entre le processus principal et les fenêtres (exposé par le preload).
 
 import type { Geometry, Session } from '@pastille/shared';
-import type { LicenseView } from './main/license.ts';
 import type { ProjectSummary, SessionSummary } from './main/session-store.ts';
 import type { Settings, SettingsView } from './main/settings.ts';
 import type { ImportReport } from './main/share.ts';
 import type { ShareView } from './main/sync.ts';
 
-export type { ImportReport, LicenseView, ProjectSummary, SessionSummary, Settings, ShareView };
+export type { ImportReport, ProjectSummary, SessionSummary, Settings, ShareView };
 
 /** Écran figé, et de quoi annoncer la capture : session, numéro d'écran, numéro du prochain point. */
 export type OverlayShow = {
@@ -143,14 +142,13 @@ export type SettingsState = SettingsView & {
   tabletPaired: boolean;
   tabletConnected: boolean;
   mcp: { url?: string; error?: string }; // serveur MCP pour Claude Code
-  license: LicenseView;
   version: string; // version installée de l'app
 };
 
 /** Fenêtre d'appairage : le code QR (image) et l'état de la tablette. */
 export type PairingState = { qr: string; connected: boolean };
 
-export type SettingsTab = 'general' | 'permissions' | 'transcription' | 'export' | 'devices' | 'claude' | 'license';
+export type SettingsTab = 'general' | 'permissions' | 'transcription' | 'export' | 'devices' | 'claude';
 export type ExportResult = { ok: true; path: string } | { ok: false; error: string };
 export type ShareResult<T> = ({ ok: true } & T) | { ok: false; error: string };
 
@@ -167,11 +165,10 @@ export type MenuState = {
   tour?: { screens: number }; // mode parcours en cours : écrans gardés
   recents: SessionSummary[];
   update?: string; // version plus récente publiée
-  license: LicenseView;
 };
 
 export type MenuAction =
-  | { type: 'capture' | 'video' | 'tour' | 'tour-video' | 'open-document' | 'editor' | 'sessions' | 'export' | 'new-session' | 'pair' | 'claude-code' | 'settings' | 'quit' | 'close' | 'hide-bar' | 'reveal' | 'update' | 'license' }
+  | { type: 'capture' | 'video' | 'tour' | 'tour-video' | 'open-document' | 'editor' | 'sessions' | 'export' | 'new-session' | 'pair' | 'claude-code' | 'settings' | 'quit' | 'close' | 'hide-bar' | 'reveal' | 'update' }
   | { type: 'open-recent' | 'export-recent'; id: string };
 
 /** Message de la barre flottante après un export. */
@@ -245,8 +242,6 @@ export type PastilleApi = {
   openSettings(tab?: SettingsTab): void;
   copyText(text: string): void;
   onShortcutPressed(cb: () => void): () => void; // assistant de premier lancement
-  activateLicense(key: string): Promise<{ ok: true } | { ok: false; error: string }>;
-  openLicensePage(page: 'buy' | 'portal'): void; // site (tarifs) ou portail client Polar, dans le navigateur
   // Menu de l'icône et barre flottante
   getMenuState(): Promise<MenuState>;
   onMenuState(cb: (s: MenuState) => void): () => void;

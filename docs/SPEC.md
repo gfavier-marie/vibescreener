@@ -160,7 +160,7 @@ Un PDF, un Word, un Excel ou un PowerPoint s'ouvre dans l'app et se commente com
   - par l'éditeur (cartes de l'éditeur vide, menu Nouveau de l'en-tête) ;
   - en déposant le fichier sur l'éditeur.
 - Formats : .pdf, .docx/.docm/.dotx, .xlsx/.xlsm/.xltx, .pptx/.pptm/.potx. Les anciens formats (.doc, .xls, .ppt) et les fichiers protégés par mot de passe sont refusés avec un message.
-- Le document devient une session nommée d'après le fichier, sauf si la session ouverte est vide. Comme pour la capture, un essai terminé bloque l'ouverture d'un nouveau document.
+- Le document devient une session nommée d'après le fichier, sauf si la session ouverte est vide.
 - Chaque page devient une capture :
   - une page de PDF ou de Word ;
   - une diapositive ;
@@ -192,7 +192,7 @@ Un PDF, un Word, un Excel ou un PowerPoint s'ouvre dans l'app et se commente com
 
 On se promène vite dans un logiciel ; à l'arrêt, toute son interface est en captures, prête à commenter ou à donner à l'IA.
 
-- Démarrage : le mode « Parcours » (menu de l'icône, éditeur vide, menu Nouveau de l'éditeur). L'overlay de capture s'ouvre : un clic choisit la fenêtre à suivre (hors de toute fenêtre, l'écran entier), Échap annule. Même blocage que la capture après l'essai.
+- Démarrage : le mode « Parcours » (menu de l'icône, éditeur vide, menu Nouveau de l'éditeur). L'overlay de capture s'ouvre : un clic choisit la fenêtre à suivre (hors de toute fenêtre, l'écran entier), Échap annule.
 - Pendant le parcours :
   - pas de micro, pas de clics globaux (ni Accessibilité) : tout se lit dans les images de la fenêtre ;
   - l'icône passe en enregistrement, son menu dit « Arrêter le parcours (N écrans) » ;

@@ -1,4 +1,4 @@
-// Site public (landing, tarifs, pages légales) en cinq langues : fichiers statiques produits par build.ts, sans code Worker.
+// Site public (landing, pages légales) en cinq langues : fichiers statiques produits par build.ts, sans code Worker.
 {
   "name": "vibescreener-site",
   "compatibility_date": "2026-10-01",
